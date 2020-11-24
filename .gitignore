@@ -1,0 +1,4 @@
+rootfs/
+packages/
+rootfs*.img
+rootfs*.tar.*
