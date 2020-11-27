@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+[ ! -z "${DEBUG}" ] && set -x
 
 echo ""
 echo "############################################"
@@ -19,7 +19,9 @@ APT_CMD="apt"
 ARCH="amd64"
 DISTRO="focal"
 DEBOOTSTRAP_OPTIONS=""
+
 # default (file) paths
+INSTALLER_SCRIPT="${SCRIPT_PATH}/image-installer.sh"
 ROOTFS_IMAGE_FILE="${SCRIPT_PATH}/rootfs.img"
 ROOTFS_TARBALL="${SCRIPT_PATH}/rootfs.tar.bz2"
 ROOTFS_PATH="${SCRIPT_PATH}/rootfs"
@@ -27,21 +29,30 @@ CONF_PATH="${SCRIPT_PATH}/confs"
 PKG_DEB_PATH="${SCRIPT_PATH}/packages/deb"
 PKG_TARBALLS_PATH="${SCRIPT_PATH}/packages/tarballs"
 PKG_BINARIES_PATH="${SCRIPT_PATH}/packages/binaries"
+
 # default image configs
 IMAGE_USER="polar"
 IMAGE_PASSWORD="evis32"
 IMAGE_HOSTNAME="ubuntu"
 QT_VERSION="5.15.0"
+
 # default options
 CLEAN="NO"
 ENTER_CHROOT="NO"
 IMAGE_TYPE="production"
+
 # package lists
 QT_SHORT_VERSION="$(echo ${QT_VERSION%.*} | tr -d '.')"
 BASE_IMAGE_PACKAGES="sudo apt-utils"
 RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox xterm network-manager x11-xserver-utils libmbedtls12 apt-offline"
 DEV_IMAGE_PACKAGES="git xvfb flex bison libxcursor-dev libxcomposite-dev build-essential libssl-dev libxcb1-dev libgl1-mesa-dev libmbedtls-dev"
+DEB_DEV_PACKAGES="dpkg-dev dh-make devscripts git-buildpackage quilt"
+INSTALLATION_IMAGE_PACKAGES="gdisk"
 QT_IMAGE_PACKAGES="qt${QT_SHORT_VERSION}declarative"
+
+# option lists
+ARCH_LIST="i386 amd64 armel armhf"
+IMAGE_TYPE_LIST="production development installation"
 
 ####################### Functions #######################
 
@@ -49,6 +60,30 @@ function usage() {
     echo "Usage: $(basename $0) <options>"
     echo ""
     echo "Options:"
+    echo "  --arch <architecture-string> :"
+    echo "      Sets the architecture for the rootfs. Available architectures: ${ARCH_LIST// /, }"
+    echo "      Default: ${ARCH}"
+    echo ""
+    echo "  --distro <distribution-string> :"
+    echo "      Sets the Debian/Ubuntu distribution for the rootfs. E.g. xenial, bionic, focal, ..."
+    echo "      Default: ${DISTRO}"
+    echo ""
+    echo "  --image-target <string> :"
+    echo "      Specifies the image target. The option string can be either \"loop\", /dev/sdX, \"tarball\" or \"installer\"."
+    echo ""
+    echo "  --image-type <string> :"
+    echo "      Specifies the image type. Available image types: ${IMAGE_TYPE_LIST// /, }"
+    echo "      Default: ${IMAGE_TYPE}"
+    echo ""
+    echo "  --clean :"
+    echo "      Cleans the image-creator environment (rootfs, image files, tarballs, ...)."
+    echo ""
+    echo "  --enter-chroot :"
+    echo "      Starts a chroot environment after image creation."
+    echo ""
+    echo "  -h|--help :"
+    echo "      This help dialog."
+    echo ""
 }
 
 function console_log() {
@@ -176,8 +211,6 @@ then
 fi
 
 DISTRO_LIST=$(find /usr/share/debootstrap/scripts/ -type l -print | xargs -I {} basename {})
-ARCH_LIST="i386 amd64 armel armhf"
-IMAGE_TYPE_LIST="production development installation"
 
 DISTRO_OK="false"
 for DISTRO_NAME in ${DISTRO_LIST}
@@ -219,7 +252,7 @@ fi
 if [ ! -z "${IMAGE_TARGET}" ]
 then
     case ${IMAGE_TARGET} in
-        *loop*)
+        loop)
             IMAGE_TARGET_TYPE="loop"
             [ "${CLEAN}" = "YES" ] && rm -f "${SCRIPT_PATH}/*.img"
             ;;
@@ -229,13 +262,17 @@ then
             PART_TOOL="$(which sgdisk)"
             [ -e "${PART_TOOL}" ] || error "No partition tool found!"
             ;;
-        *tarball*)
+        tarball)
             IMAGE_TARGET_TYPE="tarball"
+            [ "${CLEAN}" = "YES" ] && rm -f "${SCRIPT_PATH}/*.tar.*"
+            ;;
+        installer)
+            IMAGE_TARGET_TYPE="installer"
             [ "${CLEAN}" = "YES" ] && rm -f "${SCRIPT_PATH}/*.tar.*"
             ;;
         *)
             console_log "Unknown image target ${IMAGE_TARGET}!"
-            console_log "Available image types: loop | /dev/sdX | tarball"
+            console_log "Available image types: loop | /dev/sdX | tarball | installer"
             console_log ""
             exit 1
             ;;
@@ -249,10 +286,10 @@ then
             IMAGE_PACKAGE_LIST="${RUNTIME_IMAGE_PACKAGES} ${QT_IMAGE_PACKAGES}"
             ;;
         development)
-            IMAGE_PACKAGE_LIST="${QT_IMAGE_PACKAGES} ${DEV_IMAGE_PACKAGES}"
+            IMAGE_PACKAGE_LIST="${QT_IMAGE_PACKAGES} ${DEV_IMAGE_PACKAGES} ${DEB_DEV_PACKAGES}"
             ;;
         installation)
-            IMAGE_PACKAGE_LIST="${RUNTIME_IMAGE_PACKAGES}"
+            IMAGE_PACKAGE_LIST="${INSTALLATION_IMAGE_PACKAGES} ${RUNTIME_IMAGE_PACKAGES}"
             ;;
         *)
             console_log "Unknown image type ${IMAGE_TYPE}!"
@@ -295,11 +332,9 @@ fi
 
 if [ "${IMAGE_TARGET_TYPE}" = "dev" ]
 then
-    create_partition_table "${IMAGE_TARGET}"
-    
-    BOOT_PARTITION="${IMAGE_TARGET}p1"
-    ROOTFS_PARTITION="${IMAGE_TARGET}p2"
-    DATAFS_PARTITION="${IMAGE_TARGET}p3"
+    BOOT_PARTITION="${IMAGE_TARGET}1"
+    ROOTFS_PARTITION="${IMAGE_TARGET}2"
+    DATAFS_PARTITION="${IMAGE_TARGET}3"
 
     create_partitions "${IMAGE_TARGET}" "${BOOT_PARTITION}" "${ROOTFS_PARTITION}" "${DATAFS_PARTITION}"
 
@@ -356,6 +391,10 @@ fi
 console_log "### Configure locales ###"
 chroot ${ROOTFS_PATH} locale-gen de_DE.UTF-8
 
+console_log "### Configure dash/bash ###"
+chroot ${ROOTFS_PATH} /bin/bash -c 'echo "dash dash/sh boolean false" | debconf-set-selections'
+chroot ${ROOTFS_PATH} /bin/bash -c 'DEBIAN_FRONTEND=noninteractive dpkg-reconfigure dash'
+
 # update rootfs
 console_log "### Update rootfs ###"
 cp /etc/resolv.conf ${ROOTFS_PATH}/etc
@@ -366,7 +405,6 @@ chroot ${ROOTFS_PATH} ${APT_CMD} -y dist-upgrade
 
 # install some fundamental packages
 console_log "### Install packages in rootfs ###"
-
 chroot ${ROOTFS_PATH} ${APT_CMD} update
 chroot ${ROOTFS_PATH} ${APT_CMD} -y install ${IMAGE_PACKAGE_LIST}
 chroot ${ROOTFS_PATH} ${APT_CMD} -y clean
@@ -418,18 +456,39 @@ sync
 
 umount_dev_sys_proc "${ROOTFS_PATH}"
 
-if [ "${IMAGE_TARGET_TYPE}" = "tarball" ]
+if [ "${IMAGE_TARGET_TYPE}" = "tarball" -o "${IMAGE_TARGET_TYPE}" = "installer" ]
 then
     console_log "### Create rootfs tarball ###"
-    pushd ${ROOTFS_PATH} &> /dev/null
+    pushd "${ROOTFS_PATH}" &> /dev/null
     tar -cjf ${ROOTFS_TARBALL} *
     popd &> /dev/null
+
+    if [ "${IMAGE_TARGET_TYPE}" = "installer" ]
+    then
+        INSTALLER_BINARY="${SCRIPT_PATH}/${IMAGE_TYPE}-image-installer_$(date '+%Y%m%d%H%M%S').bin"
+        cat "${INSTALLER_SCRIPT}" "${ROOTFS_TARBALL}" > "${INSTALLER_BINARY}"
+        chmod +x "${INSTALLER_BINARY}"
+        ln -sf "${INSTALLER_BINARY}" "${SCRIPT_PATH}/${IMAGE_TYPE}-image-installer_latest.bin"
+    fi
+fi
+
+if [ "${IMAGE_TARGET_TYPE}" = "installation" ]
+then
+    LATEST_INSTALLER_BINARY="$(readlink -f "${SCRIPT_PATH}/${IMAGE_TYPE}-image-installer_latest.bin")"
+    if [ -e "${LATEST_INSTALLER_BINARY}" ]
+    then
+        cp ${LATEST_INSTALLER_BINARY} "${ROOTFS_PATH}/home/${IMAGE_USER}/"
+    else
+        console_log "Image installer binary not found!"
+        console_log "Please create a \"${IMAGE_TYPE}\" image installer binary first!"
+        exit 1
+    fi
 fi
 
 if [ "${IMAGE_TARGET_TYPE}" = "dev" -o "${IMAGE_TARGET_TYPE}" = "loop" ]
 then
     losetup -D
-    umount ${ROOTFS_PATH}
+    umount "${ROOTFS_PATH}"
 fi
 
 
