@@ -429,7 +429,7 @@ find ${CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -r {} ${ROOTFS_PATH} 
 echo "${IMAGE_HOSTNAME}" > ${ROOTFS_PATH}/etc/hostname
 sed -i "s/replace-me/${IMAGE_HOSTNAME}/g" ${ROOTFS_PATH}/etc/hosts
 
-if [ "${IMAGE_TARGET_TYPE}" != "development" ]
+if [ "${IMAGE_TYPE}" != "development" ]
 then
     sed -i "s/NODM_ENABLED=false/NODM_ENABLED=true/g" ${ROOTFS_PATH}/etc/default/nodm
     sed -i "s/NODM_USER=root/NODM_USER=${IMAGE_USER}/g" ${ROOTFS_PATH}/etc/default/nodm
@@ -475,15 +475,16 @@ then
     fi
 fi
 
-if [ "${IMAGE_TARGET_TYPE}" = "installation" ]
+if [ "${IMAGE_TYPE}" = "installation" ]
 then
-    LATEST_INSTALLER_BINARY="$(readlink -f "${SCRIPT_PATH}/${IMAGE_TYPE}-image-installer_latest.bin")"
+    LATEST_INSTALLER_BINARY="$(readlink -f "${SCRIPT_PATH}/production-image-installer_latest.bin")"
     if [ -e "${LATEST_INSTALLER_BINARY}" ]
     then
         cp ${LATEST_INSTALLER_BINARY} "${ROOTFS_PATH}/home/${IMAGE_USER}/"
     else
         console_log "Image installer binary not found!"
-        console_log "Please create a \"${IMAGE_TYPE}\" image installer binary first!"
+        console_log "Please create a production image installer binary first!"
+        console_log "e.g.: $0 --arch amd64 --distro focal --image-target installer --image-type production"
         exit 1
     fi
 fi
