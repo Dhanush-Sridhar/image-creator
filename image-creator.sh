@@ -370,7 +370,7 @@ then
         REPO_URL="http://de.archive.ubuntu.com/ubuntu"
     fi
     
-    REPO_COMPONENTS="main restricted universe multiverse"
+    REPO_COMPONENTS="main universe multiverse"
 
     echo "" > "${ROOTFS_PATH}/etc/apt/sources.list"
 
