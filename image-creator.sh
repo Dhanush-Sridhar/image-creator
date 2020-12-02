@@ -424,7 +424,7 @@ fi
 
 console_log "### Configure rootfs ###"
 ## install (pre)config files to rootfs
-find ${CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -a {} ${ROOTFS_PATH} \;
+find ${CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -r {} ${ROOTFS_PATH} \;
 
 echo "${IMAGE_HOSTNAME}" > ${ROOTFS_PATH}/etc/hostname
 sed -i "s/replace-me/${IMAGE_HOSTNAME}/g" ${ROOTFS_PATH}/etc/hosts
