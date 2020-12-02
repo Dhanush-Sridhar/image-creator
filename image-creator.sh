@@ -48,7 +48,7 @@ RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox
 DEV_IMAGE_PACKAGES="git xvfb flex bison libxcursor-dev libxcomposite-dev build-essential libssl-dev libxcb1-dev libgl1-mesa-dev libmbedtls-dev"
 DEB_DEV_PACKAGES="dpkg-dev dh-make devscripts git-buildpackage quilt"
 INSTALLATION_IMAGE_PACKAGES="gdisk"
-QT_IMAGE_PACKAGES="qt${QT_SHORT_VERSION}declarative"
+QT_IMAGE_PACKAGES="qt${QT_SHORT_VERSION}declarative qt${QT_SHORT_VERSION}quickcontrols2 qt${QT_SHORT_VERSION}graphicaleffects qt${QT_SHORT_VERSION}svg qt${QT_SHORT_VERSION}serialport"
 
 # option lists
 ARCH_LIST="i386 amd64 armel armhf"
