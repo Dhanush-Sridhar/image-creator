@@ -409,6 +409,16 @@ chroot ${ROOTFS_PATH} ${APT_CMD} update
 chroot ${ROOTFS_PATH} ${APT_CMD} -y install ${IMAGE_PACKAGE_LIST}
 chroot ${ROOTFS_PATH} ${APT_CMD} -y clean
 
+console_log "### Install local packages to the rootfs ###"
+if [ "${IMAGE_TYPE}" != "installation" ]
+then
+    for TAR_FILE in $(ls -1 ${PKG_TARBALLS_PATH}/*.tar*)
+    do
+        console_log "## Install $(basename ${TAR_FILE}) to rootfs ##"
+        tar -xf ${TAR_FILE} -C ${ROOTFS_PATH}
+    done
+fi
+
 console_log "### User management ###"
 echo -e "${IMAGE_PASSWORD}\n${IMAGE_PASSWORD}\n" | chroot ${ROOTFS_PATH} passwd root
 
