@@ -1,0 +1,91 @@
+<?PM-XML version="1.0" encoding="UTF-8" ?>
+<polar_cut_program version="1.1">
+   <application  name="espv" >
+      <security_query>01IDBFDMPE</security_query>
+   </application>
+   <program_info>
+      <value  id="1" type="job_name" >Start Up</value>
+   </program_info>
+   <program_global>
+      <creation_time_stamp>
+         <date>
+            <year>2015</year>
+            <month>11</month>
+            <day>11</day>
+         </date>
+         <time>
+            <hour>10</hour>
+            <minute>36</minute>
+            <second>19</second>
+         </time>
+      </creation_time_stamp>
+      <write_protection>0</write_protection>
+      <alignment_adjustment_1>0</alignment_adjustment_1>
+      <alignment_adjustment_2>0</alignment_adjustment_2>
+   </program_global>
+   <program_parameters/>
+   <program_steps>
+      <cut_step number="1" type="0" >
+         <measure>186</measure>
+      </cut_step>
+      <cut_step number="2" type="6" >
+         <comment  type="4" >RECHTS 90 GRD DREHEN</comment>
+      </cut_step>
+      <cut_step number="3" type="0" >
+         <measure>274</measure>
+      </cut_step>
+      <cut_step number="4" type="6" >
+         <comment  type="4" >RECHTS 90 GRD DREHEN</comment>
+      </cut_step>
+      <cut_step number="5" type="0" >
+         <measure>162</measure>
+      </cut_step>
+      <cut_step number="6" type="6" >
+         <comment  type="4" >RECHTS 90 GRD DREHEN</comment>
+      </cut_step>
+      <cut_step number="7" type="0" >
+         <measure>251</measure>
+      </cut_step>
+      <cut_step number="8" type="0" >
+         <measure>137</measure>
+      </cut_step>
+      <cut_step number="9" type="0" >
+         <measure>114</measure>
+      </cut_step>
+   </program_steps>
+   <program_graphic>
+      <sheet>
+         <length_x>297</length_x>
+         <length_y>210</length_y>
+         <length_Z>0</length_Z>
+         <sheet_batch>0</sheet_batch>
+         <sheet_lay>0</sheet_lay>
+      </sheet>
+      <label>
+         <pos_x>23</pos_x>
+         <pos_y>24</pos_y>
+         <length_x>114</length_x>
+         <length_y>162</length_y>
+         <label_id>1</label_id>
+         <color>1</color>
+      </label>
+      <label>
+         <pos_x>160</pos_x>
+         <pos_y>24</pos_y>
+         <length_x>114</length_x>
+         <length_y>162</length_y>
+         <label_id>1</label_id>
+         <color>1</color>
+      </label>
+      <block>
+         <pos_x>23</pos_x>
+         <pos_y>24</pos_y>
+         <length_x>251</length_x>
+         <length_y>162</length_y>
+      </block>
+   </program_graphic>
+   <program_process/>
+   <program_images/>
+   <program_book/>
+</polar_cut_program>
+
