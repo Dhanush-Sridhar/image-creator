@@ -14,6 +14,7 @@ echo ""
 SCRIPT_PATH="$(dirname $(readlink -f $0))"
 IMAGE_TARGET="/dev/sda"
 ROOTFS_PATH="/stage"
+DATAFS_PATH="${ROOTFS_PATH}/data"
 
 ####################### Functions #######################
 
@@ -127,7 +128,7 @@ then
     error "${IMAGE_TARGET} not found!"
 fi
 
-mkdir -p "${ROOTFS_PATH}"
+mkdir -p "${ROOTFS_PATH}" "${DATAFS_PATH}"
 
 ####################### Main #######################
 
@@ -138,6 +139,7 @@ DATAFS_PARTITION="${IMAGE_TARGET}3"
 create_partitions "${IMAGE_TARGET}" "${BOOT_PARTITION}" "${ROOTFS_PARTITION}" "${DATAFS_PARTITION}"
 
 mount "${ROOTFS_PARTITION}" "${ROOTFS_PATH}" || error "Could not mount ${ROOTFS_PARTITION} to ${ROOTFS_PATH}!"
+mount "${DATAFS_PARTITION}" "${DATAFS_PATH}" || error "Could not mount ${DATAFS_PARTITION} to ${DATAFS_PATH}!"
 
 console_log "### Installing RootFS to Internal Flash ##"#
 # determine the line number of this script where the payload begins
@@ -152,8 +154,10 @@ mount_dev_sys_proc "${ROOTFS_PATH}"
 echo "### Configuring RootFS on Internal Flash ###"
 console_log "## Install fstab ##"
 UUID_ROOTFS=$(/bin/lsblk -o UUID -n ${ROOTFS_PARTITION})
+UUID_DATAFS=$(/bin/lsblk -o UUID -n ${DATAFS_PARTITION})
 cat <<EOF > ${ROOTFS_PATH}/etc/fstab
 UUID=${UUID_ROOTFS}  /          ext4  errors=remount-ro  0  1
+UUID=${UUID_DATAFS}  /data      vfat  uid=polar,gid=polar  0  2
 EOF
 
 console_log "## Install bootloader ##"
@@ -163,6 +167,7 @@ chroot "${ROOTFS_PATH}" update-grub
 
 umount_dev_sys_proc "${ROOTFS_PATH}"
 
+umount "${DATAFS_PATH}"
 umount "${ROOTFS_PATH}"
 
 exit 0
