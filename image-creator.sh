@@ -25,7 +25,9 @@ INSTALLER_SCRIPT="${SCRIPT_PATH}/image-installer.sh"
 ROOTFS_IMAGE_FILE="${SCRIPT_PATH}/rootfs.img"
 ROOTFS_TARBALL="${SCRIPT_PATH}/rootfs.tar.bz2"
 ROOTFS_PATH="${SCRIPT_PATH}/rootfs"
-CONF_PATH="${SCRIPT_PATH}/confs"
+DATAFS_PATH="${SCRIPT_PATH}/rootfs/data"
+ROOTFS_CONF_PATH="${SCRIPT_PATH}/confs/system"
+APP_CONF_PATH="${SCRIPT_PATH}/confs/app"
 PKG_DEB_PATH="${SCRIPT_PATH}/packages/deb"
 PKG_TARBALLS_PATH="${SCRIPT_PATH}/packages/tarballs"
 PKG_BINARIES_PATH="${SCRIPT_PATH}/packages/binaries"
@@ -138,6 +140,17 @@ function create_partitions() {
 
     mkfs.ext4 ${_ROOTFS_PARTITION}
     mkfs.vfat ${_DATAFS_PARTITION}
+}
+
+function mount_rootfs_datafs() {
+    local _ROOTFS_PARTITION="$1"
+    local _ROOTFS_PATH="$2"
+    local _DATAFS_PARTITION="$3"
+    local _DATAFS_PATH="$4"
+
+    mount "${_ROOTFS_PARTITION}" "${_ROOTFS_PATH}" || error "Could not mount ${_ROOTFS_PARTITION} to ${_ROOTFS_PATH}!"
+    mkdir -p "${_DATAFS_PATH}"
+    mount "${_DATAFS_PARTITION}" "${_DATAFS_PATH}" || error "Could not mount ${_DATAFS_PARTITION} to ${_DATAFS_PATH}!"
 }
 
 ####################### Parameters #######################
@@ -327,7 +340,7 @@ then
     
     create_partitions "${IMAGE_TARGET}" "${BOOT_PARTITION}" "${ROOTFS_PARTITION}" "${DATAFS_PARTITION}"
     
-    mount "${ROOTFS_PARTITION}" "${ROOTFS_PATH}" || error "Could not mount ${ROOTFS_PARTITION} to ${ROOTFS_PATH}!"
+    mount_rootfs_datafs "${ROOTFS_PARTITION}" "${ROOTFS_PATH}" "${DATAFS_PARTITION}" "${DATAFS_PATH}"
 fi
 
 if [ "${IMAGE_TARGET_TYPE}" = "dev" ]
@@ -338,7 +351,7 @@ then
 
     create_partitions "${IMAGE_TARGET}" "${BOOT_PARTITION}" "${ROOTFS_PARTITION}" "${DATAFS_PARTITION}"
 
-    mount "${ROOTFS_PARTITION}" "${ROOTFS_PATH}" || error "Could not mount ${ROOTFS_PARTITION} to ${ROOTFS_PATH}!"
+    mount_rootfs_datafs "${ROOTFS_PARTITION}" "${ROOTFS_PATH}" "${DATAFS_PARTITION}" "${DATAFS_PATH}"
 fi
 
 # create an initial rootfs using debootstrap
@@ -400,7 +413,7 @@ console_log "### Update rootfs ###"
 cp /etc/resolv.conf ${ROOTFS_PATH}/etc
 chroot ${ROOTFS_PATH} ${APT_CMD} update
 POLICY_RC_D_FILE="${ROOTFS_PATH}/usr/sbin/policy-rc.d"
-install -m 0644 ${CONF_PATH}/policy-rc.d ${POLICY_RC_D_FILE}
+install -m 0644 ${ROOTFS_CONF_PATH}/policy-rc.d ${POLICY_RC_D_FILE}
 chroot ${ROOTFS_PATH} ${APT_CMD} -y dist-upgrade
 
 # install some fundamental packages
@@ -427,14 +440,10 @@ chroot ${ROOTFS_PATH} usermod -a -G sudo,video,audio,plugdev ${IMAGE_USER}
 
 echo -e "${IMAGE_PASSWORD}\n${IMAGE_PASSWORD}\n" | chroot ${ROOTFS_PATH} passwd ${IMAGE_USER}
 
-if [ "${ENTER_CHROOT}" = "YES" ]
-then
-    chroot "${ROOTFS_PATH}"
-fi
 
 console_log "### Configure rootfs ###"
 ## install (pre)config files to rootfs
-find ${CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -r {} ${ROOTFS_PATH} \;
+find ${ROOTFS_CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -r {} ${ROOTFS_PATH} \;
 
 echo "${IMAGE_HOSTNAME}" > ${ROOTFS_PATH}/etc/hostname
 sed -i "s/replace-me/${IMAGE_HOSTNAME}/g" ${ROOTFS_PATH}/etc/hosts
@@ -446,16 +455,27 @@ then
     sed -i "s/NODM_X_OPTIONS='-nolisten tcp'/NODM_X_OPTIONS='-nolisten tcp -nocursor'/g" ${ROOTFS_PATH}/etc/default/nodm
 
     mkdir -p ${ROOTFS_PATH}/home/${IMAGE_USER}/.config/openbox
-    install -m 0644 ${CONF_PATH}/autostart ${ROOTFS_PATH}/home/${IMAGE_USER}/.config/openbox
+    install -m 0644 ${ROOTFS_CONF_PATH}/autostart ${ROOTFS_PATH}/home/${IMAGE_USER}/.config/openbox
 fi
 
+if [ "${IMAGE_TYPE}" = "production" ]
+then
+    find ${APP_CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -a {} ${ROOTFS_PATH} \;
+fi
+
+if [ "${ENTER_CHROOT}" = "YES" ]
+then
+    chroot "${ROOTFS_PATH}"
+fi
 
 if [ "${IMAGE_TARGET_TYPE}" = "dev" -o "${IMAGE_TARGET_TYPE}" = "loop" ]
 then
     console_log "### Install fstab ###"
     UUID_ROOTFS=$(/bin/lsblk -o UUID -n ${ROOTFS_PARTITION})
+    UUID_DATAFS=$(/bin/lsblk -o UUID -n ${DATAFS_PARTITION})
 cat <<EOF > ${ROOTFS_PATH}/etc/fstab
 UUID=${UUID_ROOTFS}  /          ext4  errors=remount-ro  0  1
+UUID=${UUID_DATAFS}  /data      vfat  uid=polar,gid=polar  0  2
 EOF
 
     console_log "### Install bootloader ###"
@@ -502,6 +522,7 @@ fi
 if [ "${IMAGE_TARGET_TYPE}" = "dev" -o "${IMAGE_TARGET_TYPE}" = "loop" ]
 then
     losetup -D
+    umount "${DATAFS_PATH}"
     umount "${ROOTFS_PATH}"
 fi
 
