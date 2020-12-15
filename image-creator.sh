@@ -25,7 +25,9 @@ INSTALLER_SCRIPT="${SCRIPT_PATH}/image-installer.sh"
 ROOTFS_IMAGE_FILE="${SCRIPT_PATH}/rootfs.img"
 ROOTFS_TARBALL="${SCRIPT_PATH}/rootfs.tar.bz2"
 ROOTFS_PATH="${SCRIPT_PATH}/rootfs"
-CONF_PATH="${SCRIPT_PATH}/confs"
+DATAFS_PATH="${SCRIPT_PATH}/rootfs/data"
+ROOTFS_CONF_PATH="${SCRIPT_PATH}/confs/system"
+APP_CONF_PATH="${SCRIPT_PATH}/confs/app"
 PKG_DEB_PATH="${SCRIPT_PATH}/packages/deb"
 PKG_TARBALLS_PATH="${SCRIPT_PATH}/packages/tarballs"
 PKG_BINARIES_PATH="${SCRIPT_PATH}/packages/binaries"
@@ -33,7 +35,7 @@ PKG_BINARIES_PATH="${SCRIPT_PATH}/packages/binaries"
 # default image configs
 IMAGE_USER="polar"
 IMAGE_PASSWORD="evis32"
-IMAGE_HOSTNAME="ubuntu"
+IMAGE_HOSTNAME="pcm-cutter-ngs"
 QT_VERSION="5.15.0"
 
 # default options
@@ -44,11 +46,11 @@ IMAGE_TYPE="production"
 # package lists
 QT_SHORT_VERSION="$(echo ${QT_VERSION%.*} | tr -d '.')"
 BASE_IMAGE_PACKAGES="sudo apt-utils"
-RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox xterm network-manager x11-xserver-utils libmbedtls12 apt-offline"
+RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox xterm network-manager x11-xserver-utils libmbedtls12 apt-offline psmisc dosfstools"
 DEV_IMAGE_PACKAGES="git xvfb flex bison libxcursor-dev libxcomposite-dev build-essential libssl-dev libxcb1-dev libgl1-mesa-dev libmbedtls-dev"
 DEB_DEV_PACKAGES="dpkg-dev dh-make devscripts git-buildpackage quilt"
 INSTALLATION_IMAGE_PACKAGES="gdisk"
-QT_IMAGE_PACKAGES="qt${QT_SHORT_VERSION}declarative"
+QT_IMAGE_PACKAGES="qt${QT_SHORT_VERSION}declarative qt${QT_SHORT_VERSION}quickcontrols2 qt${QT_SHORT_VERSION}graphicaleffects qt${QT_SHORT_VERSION}svg qt${QT_SHORT_VERSION}serialport"
 
 # option lists
 ARCH_LIST="i386 amd64 armel armhf"
@@ -138,6 +140,17 @@ function create_partitions() {
 
     mkfs.ext4 ${_ROOTFS_PARTITION}
     mkfs.vfat ${_DATAFS_PARTITION}
+}
+
+function mount_rootfs_datafs() {
+    local _ROOTFS_PARTITION="$1"
+    local _ROOTFS_PATH="$2"
+    local _DATAFS_PARTITION="$3"
+    local _DATAFS_PATH="$4"
+
+    mount "${_ROOTFS_PARTITION}" "${_ROOTFS_PATH}" || error "Could not mount ${_ROOTFS_PARTITION} to ${_ROOTFS_PATH}!"
+    mkdir -p "${_DATAFS_PATH}"
+    mount "${_DATAFS_PARTITION}" "${_DATAFS_PATH}" || error "Could not mount ${_DATAFS_PARTITION} to ${_DATAFS_PATH}!"
 }
 
 ####################### Parameters #######################
@@ -268,7 +281,7 @@ then
             ;;
         installer)
             IMAGE_TARGET_TYPE="installer"
-            [ "${CLEAN}" = "YES" ] && rm -f "${SCRIPT_PATH}/*.tar.*"
+            [ "${CLEAN}" = "YES" ] && rm -f "${SCRIPT_PATH}/*.tar.*" "${SCRIPT_PATH}/*.bin"
             ;;
         *)
             console_log "Unknown image target ${IMAGE_TARGET}!"
@@ -327,7 +340,7 @@ then
     
     create_partitions "${IMAGE_TARGET}" "${BOOT_PARTITION}" "${ROOTFS_PARTITION}" "${DATAFS_PARTITION}"
     
-    mount "${ROOTFS_PARTITION}" "${ROOTFS_PATH}" || error "Could not mount ${ROOTFS_PARTITION} to ${ROOTFS_PATH}!"
+    mount_rootfs_datafs "${ROOTFS_PARTITION}" "${ROOTFS_PATH}" "${DATAFS_PARTITION}" "${DATAFS_PATH}"
 fi
 
 if [ "${IMAGE_TARGET_TYPE}" = "dev" ]
@@ -338,11 +351,10 @@ then
 
     create_partitions "${IMAGE_TARGET}" "${BOOT_PARTITION}" "${ROOTFS_PARTITION}" "${DATAFS_PARTITION}"
 
-    mount "${ROOTFS_PARTITION}" "${ROOTFS_PATH}" || error "Could not mount ${ROOTFS_PARTITION} to ${ROOTFS_PATH}!"
+    mount_rootfs_datafs "${ROOTFS_PARTITION}" "${ROOTFS_PATH}" "${DATAFS_PARTITION}" "${DATAFS_PATH}"
 fi
 
 # create an initial rootfs using debootstrap
-IMAGE_HOSTNAME="${IMAGE_HOSTNAME}-${ARCH}"
 if [ ! -e "${ROOTFS_PATH}/etc/os-release" ]
 then
     console_log "### Create rootfs ### "
@@ -370,7 +382,7 @@ then
         REPO_URL="http://de.archive.ubuntu.com/ubuntu"
     fi
     
-    REPO_COMPONENTS="main restricted universe multiverse"
+    REPO_COMPONENTS="main universe multiverse"
 
     echo "" > "${ROOTFS_PATH}/etc/apt/sources.list"
 
@@ -400,7 +412,7 @@ console_log "### Update rootfs ###"
 cp /etc/resolv.conf ${ROOTFS_PATH}/etc
 chroot ${ROOTFS_PATH} ${APT_CMD} update
 POLICY_RC_D_FILE="${ROOTFS_PATH}/usr/sbin/policy-rc.d"
-install -m 0644 ${CONF_PATH}/policy-rc.d ${POLICY_RC_D_FILE}
+install -m 0644 ${ROOTFS_CONF_PATH}/policy-rc.d ${POLICY_RC_D_FILE}
 chroot ${ROOTFS_PATH} ${APT_CMD} -y dist-upgrade
 
 # install some fundamental packages
@@ -408,6 +420,29 @@ console_log "### Install packages in rootfs ###"
 chroot ${ROOTFS_PATH} ${APT_CMD} update
 chroot ${ROOTFS_PATH} ${APT_CMD} -y install ${IMAGE_PACKAGE_LIST}
 chroot ${ROOTFS_PATH} ${APT_CMD} -y clean
+
+console_log "### Install local packages to the rootfs ###"
+if [ "${IMAGE_TYPE}" != "installation" ]
+then
+    ## Tarball packages
+    for TAR_FILE in $(ls -1 ${PKG_TARBALLS_PATH}/*.tar*)
+    do
+        console_log "## Install $(basename ${TAR_FILE}) to rootfs ##"
+        tar -xf ${TAR_FILE} -C ${ROOTFS_PATH}
+    done
+
+    ## Debian packages
+    mount -o bind "${PKG_DEB_PATH}" "${ROOTFS_PATH}/mnt"
+    for DEB_FILE in $(ls -1 ${PKG_DEB_PATH}/*.deb)
+    do
+        console_log "## Install $(basename ${DEB_FILE}) to rootfs ##"
+        chroot "${ROOTFS_PATH}" dpkg -i "/mnt/$(basename ${DEB_FILE})"
+    done
+    umount "${ROOTFS_PATH}/mnt"
+
+    ## Binary files
+    find ${PKG_BINARIES_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -r {} ${ROOTFS_PATH} \;
+fi
 
 console_log "### User management ###"
 echo -e "${IMAGE_PASSWORD}\n${IMAGE_PASSWORD}\n" | chroot ${ROOTFS_PATH} passwd root
@@ -417,32 +452,43 @@ chroot ${ROOTFS_PATH} usermod -a -G sudo,video,audio,plugdev ${IMAGE_USER}
 
 echo -e "${IMAGE_PASSWORD}\n${IMAGE_PASSWORD}\n" | chroot ${ROOTFS_PATH} passwd ${IMAGE_USER}
 
+
+console_log "### Configure rootfs ###"
+## install (pre)config files to rootfs
+find ${ROOTFS_CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -r {} ${ROOTFS_PATH} \;
+
+echo "${IMAGE_HOSTNAME}" > ${ROOTFS_PATH}/etc/hostname
+sed -i "s/replace-me/${IMAGE_HOSTNAME}/g" ${ROOTFS_PATH}/etc/hosts
+
+if [ "${IMAGE_TYPE}" != "development" ]
+then
+    sed -i "s/NODM_ENABLED=false/NODM_ENABLED=true/g" ${ROOTFS_PATH}/etc/default/nodm
+    sed -i "s/NODM_USER=root/NODM_USER=${IMAGE_USER}/g" ${ROOTFS_PATH}/etc/default/nodm
+    sed -i "s/NODM_X_OPTIONS='-nolisten tcp'/NODM_X_OPTIONS='-nolisten tcp -nocursor'/g" ${ROOTFS_PATH}/etc/default/nodm
+
+    mkdir -p ${ROOTFS_PATH}/home/${IMAGE_USER}/.config/openbox
+    install -m 0644 ${ROOTFS_CONF_PATH}/autostart ${ROOTFS_PATH}/home/${IMAGE_USER}/.config/openbox
+    chroot "${ROOTFS_PATH}" chown -R ${IMAGE_USER}:${IMAGE_USER} /home/${IMAGE_USER}/.config/
+fi
+
+if [ "${IMAGE_TYPE}" = "production" ]
+then
+    find ${APP_CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -a {} ${ROOTFS_PATH} \;
+fi
+
 if [ "${ENTER_CHROOT}" = "YES" ]
 then
     chroot "${ROOTFS_PATH}"
 fi
 
-console_log "### Configure rootfs ###"
-## install (pre)config files to rootfs
-find ${CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -a {} ${ROOTFS_PATH} \;
-
-echo "${IMAGE_HOSTNAME}" > ${ROOTFS_PATH}/etc/hostname
-sed -i "s/replace-me/${IMAGE_HOSTNAME}/g" ${ROOTFS_PATH}/etc/hosts
-
-sed -i "s/NODM_ENABLED=false/NODM_ENABLED=true/g" ${ROOTFS_PATH}/etc/default/nodm
-sed -i "s/NODM_USER=root/NODM_USER=${IMAGE_USER}/g" ${ROOTFS_PATH}/etc/default/nodm
-sed -i "s/NODM_X_OPTIONS='-nolisten tcp'/NODM_X_OPTIONS='-nolisten tcp -nocursor'/g" ${ROOTFS_PATH}/etc/default/nodm
-
-mkdir -p ${ROOTFS_PATH}/home/${IMAGE_USER}/.config/openbox
-install -m 0644 ${CONF_PATH}/autostart ${ROOTFS_PATH}/home/${IMAGE_USER}/.config/openbox
-
-
 if [ "${IMAGE_TARGET_TYPE}" = "dev" -o "${IMAGE_TARGET_TYPE}" = "loop" ]
 then
     console_log "### Install fstab ###"
     UUID_ROOTFS=$(/bin/lsblk -o UUID -n ${ROOTFS_PARTITION})
+    UUID_DATAFS=$(/bin/lsblk -o UUID -n ${DATAFS_PARTITION})
 cat <<EOF > ${ROOTFS_PATH}/etc/fstab
 UUID=${UUID_ROOTFS}  /          ext4  errors=remount-ro  0  1
+UUID=${UUID_DATAFS}  /data      vfat  uid=polar,gid=polar  0  2
 EOF
 
     console_log "### Install bootloader ###"
@@ -472,15 +518,16 @@ then
     fi
 fi
 
-if [ "${IMAGE_TARGET_TYPE}" = "installation" ]
+if [ "${IMAGE_TYPE}" = "installation" ]
 then
-    LATEST_INSTALLER_BINARY="$(readlink -f "${SCRIPT_PATH}/${IMAGE_TYPE}-image-installer_latest.bin")"
+    LATEST_INSTALLER_BINARY="$(readlink -f "${SCRIPT_PATH}/production-image-installer_latest.bin")"
     if [ -e "${LATEST_INSTALLER_BINARY}" ]
     then
         cp ${LATEST_INSTALLER_BINARY} "${ROOTFS_PATH}/home/${IMAGE_USER}/"
     else
         console_log "Image installer binary not found!"
-        console_log "Please create a \"${IMAGE_TYPE}\" image installer binary first!"
+        console_log "Please create a production image installer binary first!"
+        console_log "e.g.: $0 --arch amd64 --distro focal --image-target installer --image-type production"
         exit 1
     fi
 fi
@@ -488,6 +535,7 @@ fi
 if [ "${IMAGE_TARGET_TYPE}" = "dev" -o "${IMAGE_TARGET_TYPE}" = "loop" ]
 then
     losetup -D
+    umount "${DATAFS_PATH}"
     umount "${ROOTFS_PATH}"
 fi
 

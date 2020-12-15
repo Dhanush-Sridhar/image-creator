@@ -1,0 +1,20 @@
+# display settings
+xrandr --output DP-2 --off
+xrandr --output HDMI-1 --auto --primary
+
+# keyboard settings
+setxkbmap -option "grp:lctrl_lshift_toggle" -layout "de" &
+
+# disable screen blanking / engery saver mode
+xset s off
+xset s noblank
+xset -dpms
+
+killall pds_cutter
+
+if [ -e "/opt/pds-cutter/pds_cutter" ]
+then
+    /opt/pds-cutter/pds_cutter
+else
+    /usr/bin/xterm
+fi

@@ -44,21 +44,27 @@ Start a chroot environment during the image creation to adjust the image content
 ### Production image
 Creates an Ubuntu focal (20.04) amd64 image file
 ```
-$> ./image-creator --arch amd64 --distro focal--image-target loop --image-type production
+$> ./image-creator --arch amd64 --distro focal --image-target loop --image-type production
 --> rootfs-production.img
 ```
 
 ### Development chroot
 Creates an Ubuntu focal (20.04) amd64 development chroot tarball:
 ```
-$> ./image-creator --arch amd64 --distro focal--image-target tarball --image-type development
+$> ./image-creator --arch amd64 --distro focal --image-target tarball --image-type development
 --> rootfs-development.tar.bz2
 ```
 
 ### Installation (USB) image
+Creates an Ubuntu focal (20.04) amd64 production image installer (needed for the Installation image)
+```
+$> ./image-creator --arch amd64 --distro focal --image-target installer --image-type production
+--> production-image-installer_latest.bin
+```
+
 Creates an Ubuntu focal (20.04) amd64 live system on an USB device at /dev/sdb
 ```
-$> ./image-creator --arch amd64 --distro focal--image-target /dev/sdb --image-type installation
+$> ./image-creator --arch amd64 --distro focal --image-target /dev/sdb --image-type installation
 --> /dev/sdb
 ```
 
