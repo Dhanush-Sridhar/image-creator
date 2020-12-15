@@ -128,7 +128,7 @@ then
     error "${IMAGE_TARGET} not found!"
 fi
 
-mkdir -p "${ROOTFS_PATH}" "${DATAFS_PATH}"
+mkdir -p "${ROOTFS_PATH}"
 
 ####################### Main #######################
 
@@ -139,9 +139,10 @@ DATAFS_PARTITION="${IMAGE_TARGET}3"
 create_partitions "${IMAGE_TARGET}" "${BOOT_PARTITION}" "${ROOTFS_PARTITION}" "${DATAFS_PARTITION}"
 
 mount "${ROOTFS_PARTITION}" "${ROOTFS_PATH}" || error "Could not mount ${ROOTFS_PARTITION} to ${ROOTFS_PATH}!"
+mkdir -p "${DATAFS_PATH}"
 mount "${DATAFS_PARTITION}" "${DATAFS_PATH}" || error "Could not mount ${DATAFS_PARTITION} to ${DATAFS_PATH}!"
 
-console_log "### Installing RootFS to Internal Flash ##"#
+console_log "### Installing RootFS to Internal Flash ###"
 # determine the line number of this script where the payload begins
 PAYLOAD_LINE=`awk '/^__PAYLOAD__/ {print NR + 1; exit 0; }' $0`
 
