@@ -35,7 +35,7 @@ PKG_BINARIES_PATH="${SCRIPT_PATH}/packages/binaries"
 # default image configs
 IMAGE_USER="polar"
 IMAGE_PASSWORD="evis32"
-IMAGE_HOSTNAME="ubuntu"
+IMAGE_HOSTNAME="pcm-cutter-ngs"
 QT_VERSION="5.15.0"
 
 # default options
@@ -46,7 +46,7 @@ IMAGE_TYPE="production"
 # package lists
 QT_SHORT_VERSION="$(echo ${QT_VERSION%.*} | tr -d '.')"
 BASE_IMAGE_PACKAGES="sudo apt-utils"
-RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox xterm network-manager x11-xserver-utils libmbedtls12 apt-offline"
+RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox xterm network-manager x11-xserver-utils libmbedtls12 apt-offline psmisc dosfstools"
 DEV_IMAGE_PACKAGES="git xvfb flex bison libxcursor-dev libxcomposite-dev build-essential libssl-dev libxcb1-dev libgl1-mesa-dev libmbedtls-dev"
 DEB_DEV_PACKAGES="dpkg-dev dh-make devscripts git-buildpackage quilt"
 INSTALLATION_IMAGE_PACKAGES="gdisk"
@@ -281,7 +281,7 @@ then
             ;;
         installer)
             IMAGE_TARGET_TYPE="installer"
-            [ "${CLEAN}" = "YES" ] && rm -f "${SCRIPT_PATH}/*.tar.*"
+            [ "${CLEAN}" = "YES" ] && rm -f "${SCRIPT_PATH}/*.tar.*" "${SCRIPT_PATH}/*.bin"
             ;;
         *)
             console_log "Unknown image target ${IMAGE_TARGET}!"
@@ -355,7 +355,6 @@ then
 fi
 
 # create an initial rootfs using debootstrap
-IMAGE_HOSTNAME="${IMAGE_HOSTNAME}-${ARCH}"
 if [ ! -e "${ROOTFS_PATH}/etc/os-release" ]
 then
     console_log "### Create rootfs ### "
@@ -425,11 +424,24 @@ chroot ${ROOTFS_PATH} ${APT_CMD} -y clean
 console_log "### Install local packages to the rootfs ###"
 if [ "${IMAGE_TYPE}" != "installation" ]
 then
+    ## Tarball packages
     for TAR_FILE in $(ls -1 ${PKG_TARBALLS_PATH}/*.tar*)
     do
         console_log "## Install $(basename ${TAR_FILE}) to rootfs ##"
         tar -xf ${TAR_FILE} -C ${ROOTFS_PATH}
     done
+
+    ## Debian packages
+    mount -o bind "${PKG_DEB_PATH}" "${ROOTFS_PATH}/mnt"
+    for DEB_FILE in $(ls -1 ${PKG_DEB_PATH}/*.deb)
+    do
+        console_log "## Install $(basename ${DEB_FILE}) to rootfs ##"
+        chroot "${ROOTFS_PATH}" dpkg -i "/mnt/$(basename ${DEB_FILE})"
+    done
+    umount "${ROOTFS_PATH}/mnt"
+
+    ## Binary files
+    find ${PKG_BINARIES_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -r {} ${ROOTFS_PATH} \;
 fi
 
 console_log "### User management ###"
@@ -456,6 +468,7 @@ then
 
     mkdir -p ${ROOTFS_PATH}/home/${IMAGE_USER}/.config/openbox
     install -m 0644 ${ROOTFS_CONF_PATH}/autostart ${ROOTFS_PATH}/home/${IMAGE_USER}/.config/openbox
+    chroot "${ROOTFS_PATH}" chown -R ${IMAGE_USER}:${IMAGE_USER} /home/${IMAGE_USER}/.config/
 fi
 
 if [ "${IMAGE_TYPE}" = "production" ]
