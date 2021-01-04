@@ -267,7 +267,7 @@ then
     case ${IMAGE_TARGET} in
         loop)
             IMAGE_TARGET_TYPE="loop"
-            [ "${CLEAN}" = "YES" ] && rm -f "${SCRIPT_PATH}/*.img"
+            [ "${CLEAN}" = "YES" ] && rm -f "${SCRIPT_PATH}/"*.img
             ;;
         *dev*)
             IMAGE_TARGET_TYPE="dev"
@@ -277,11 +277,11 @@ then
             ;;
         tarball)
             IMAGE_TARGET_TYPE="tarball"
-            [ "${CLEAN}" = "YES" ] && rm -f "${SCRIPT_PATH}/*.tar.*"
+            [ "${CLEAN}" = "YES" ] && rm -f "${SCRIPT_PATH}/"*.tar.*
             ;;
         installer)
             IMAGE_TARGET_TYPE="installer"
-            [ "${CLEAN}" = "YES" ] && rm -f "${SCRIPT_PATH}/*.tar.*" "${SCRIPT_PATH}/*.bin"
+            [ "${CLEAN}" = "YES" ] && rm -f "${SCRIPT_PATH}/"*.tar.* "${SCRIPT_PATH}/"*.bin
             ;;
         *)
             console_log "Unknown image target ${IMAGE_TARGET}!"
