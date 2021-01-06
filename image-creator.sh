@@ -46,7 +46,7 @@ IMAGE_TYPE="production"
 # package lists
 QT_SHORT_VERSION="$(echo ${QT_VERSION%.*} | tr -d '.')"
 BASE_IMAGE_PACKAGES="sudo apt-utils"
-RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox xterm network-manager x11-xserver-utils libmbedtls12 apt-offline psmisc dosfstools"
+RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox xterm network-manager x11-xserver-utils libmbedtls12 apt-offline psmisc dosfstools lsscsi"
 DEV_IMAGE_PACKAGES="git xvfb flex bison libxcursor-dev libxcomposite-dev build-essential libssl-dev libxcb1-dev libgl1-mesa-dev libmbedtls-dev"
 DEB_DEV_PACKAGES="dpkg-dev dh-make devscripts git-buildpackage quilt"
 INSTALLATION_IMAGE_PACKAGES="gdisk"
@@ -475,6 +475,8 @@ if [ "${IMAGE_TYPE}" = "production" ]
 then
     find ${APP_CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -a {} ${ROOTFS_PATH} \;
 fi
+
+chroot "${ROOTFS_PATH}" chmod 600 /etc/NetworkManager/system-connections/*
 
 if [ "${ENTER_CHROOT}" = "YES" ]
 then
