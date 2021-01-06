@@ -14,7 +14,7 @@ killall pds_cutter
 
 if [ -e "/opt/pds-cutter/pds_cutter" ]
 then
-    /opt/pds-cutter/pds_cutter
+    /opt/pds-cutter/pds_cutter 2>&1 | systemd-cat -t pds-cutter
 else
     /usr/bin/xterm
 fi
