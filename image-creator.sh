@@ -31,6 +31,7 @@ APP_CONF_PATH="${SCRIPT_PATH}/confs/app"
 PKG_DEB_PATH="${SCRIPT_PATH}/packages/deb"
 PKG_TARBALLS_PATH="${SCRIPT_PATH}/packages/tarballs"
 PKG_BINARIES_PATH="${SCRIPT_PATH}/packages/binaries"
+PERMISSIONS_CONF="${ROOTFS_CONF_PATH}/permissions.conf"
 
 # default image configs
 IMAGE_USER="polar"
@@ -476,7 +477,15 @@ then
     find ${APP_CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -a {} ${ROOTFS_PATH} \;
 fi
 
-chroot "${ROOTFS_PATH}" chmod 600 /etc/NetworkManager/system-connections/*
+## configure file permissions and owner
+for PERMS in $(cat ${PERMISSIONS_CONF})
+do
+    FILE_NAME=$(echo "${PERMS}" | cut -d, -f1)
+    FILE_PERM=$(echo "${PERMS}" | cut -d, -f2)
+    FILE_OWNER=$(echo "${PERMS}" | cut -d, -f3)
+    chroot "${ROOTFS_PATH}" chown ${FILE_OWNER} ${FILE_NAME}
+    chroot "${ROOTFS_PATH}" chmod ${FILE_PERM} ${FILE_NAME}
+done
 
 if [ "${ENTER_CHROOT}" = "YES" ]
 then
