@@ -479,6 +479,7 @@ fi
 
 if [ "${IMAGE_TYPE}" = "production" ]
 then
+    chroot "${ROOTFS_PATH}" ln -sf /data/ispv_root /ispv_root
     find ${APP_CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -a {} ${ROOTFS_PATH} \;
 fi
 
