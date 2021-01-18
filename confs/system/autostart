@@ -10,7 +10,13 @@ xset s off
 xset s noblank
 xset -dpms
 
+killall x11vnc
 killall pds_cutter
+
+x11vnc -wait 50 -noxdamage -display :0 -forever -o /var/log/x11vnc.log -bg -viewonly -usepw
+
+mkdir -p ${HOME}/usb
+mountpoint -q ${HOME}/usb || sudo mount --bind /mnt ${HOME}/usb
 
 if [ -e "/opt/pds-cutter/pds_cutter" ]
 then
