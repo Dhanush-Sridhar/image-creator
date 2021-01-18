@@ -15,6 +15,7 @@ SCRIPT_PATH="$(dirname $(readlink -f $0))"
 IMAGE_TARGET="/dev/sda"
 ROOTFS_PATH="/stage"
 DATAFS_PATH="${ROOTFS_PATH}/data"
+IMAGE_USER="polar"
 
 ####################### Functions #######################
 
@@ -158,7 +159,7 @@ UUID_ROOTFS=$(/bin/lsblk -o UUID -n ${ROOTFS_PARTITION})
 UUID_DATAFS=$(/bin/lsblk -o UUID -n ${DATAFS_PARTITION})
 cat <<EOF > ${ROOTFS_PATH}/etc/fstab
 UUID=${UUID_ROOTFS}  /          ext4  errors=remount-ro  0  1
-UUID=${UUID_DATAFS}  /data      vfat  uid=polar,gid=polar  0  2
+UUID=${UUID_DATAFS}  /data      vfat  uid=${IMAGE_USER},gid=${IMAGE_USER}  0  2
 EOF
 
 console_log "## Install bootloader ##"

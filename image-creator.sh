@@ -505,7 +505,7 @@ then
     UUID_DATAFS=$(/bin/lsblk -o UUID -n ${DATAFS_PARTITION})
 cat <<EOF > ${ROOTFS_PATH}/etc/fstab
 UUID=${UUID_ROOTFS}  /          ext4  errors=remount-ro  0  1
-UUID=${UUID_DATAFS}  /data      vfat  uid=polar,gid=polar  0  2
+UUID=${UUID_DATAFS}  /data      vfat  uid=${IMAGE_USER},gid=${IMAGE_USER}  0  2
 EOF
 
     console_log "### Install bootloader ###"
