@@ -38,6 +38,7 @@ IMAGE_USER="polar"
 IMAGE_PASSWORD="evis32"
 IMAGE_HOSTNAME="pcm-cutter-ngs"
 QT_VERSION="5.15.0"
+VNC_PASSWORD="${IMAGE_PASSWORD}"
 
 # default options
 CLEAN="NO"
@@ -47,7 +48,7 @@ IMAGE_TYPE="production"
 # package lists
 QT_SHORT_VERSION="$(echo ${QT_VERSION%.*} | tr -d '.')"
 BASE_IMAGE_PACKAGES="sudo apt-utils"
-RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox xterm network-manager x11-xserver-utils libmbedtls12 apt-offline psmisc dosfstools lsscsi"
+RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox xterm network-manager x11-xserver-utils libmbedtls12 apt-offline psmisc dosfstools lsscsi x11vnc vsftpd"
 DEV_IMAGE_PACKAGES="git xvfb flex bison libxcursor-dev libxcomposite-dev build-essential libssl-dev libxcb1-dev libgl1-mesa-dev libmbedtls-dev"
 DEB_DEV_PACKAGES="dpkg-dev dh-make devscripts git-buildpackage quilt"
 INSTALLATION_IMAGE_PACKAGES="gdisk"
@@ -470,10 +471,15 @@ then
     mkdir -p ${ROOTFS_PATH}/home/${IMAGE_USER}/.config/openbox
     install -m 0644 ${ROOTFS_CONF_PATH}/autostart ${ROOTFS_PATH}/home/${IMAGE_USER}/.config/openbox
     chroot "${ROOTFS_PATH}" chown -R ${IMAGE_USER}:${IMAGE_USER} /home/${IMAGE_USER}/.config/
+
+    mkdir -p ${ROOTFS_PATH}/home/${IMAGE_USER}/.vnc/
+    chroot "${ROOTFS_PATH}" x11vnc -storepasswd ${VNC_PASSWORD} /home/${IMAGE_USER}/.vnc/passwd
+    chroot "${ROOTFS_PATH}" chown -R ${IMAGE_USER}:${IMAGE_USER} /home/${IMAGE_USER}/.vnc/
 fi
 
 if [ "${IMAGE_TYPE}" = "production" ]
 then
+    chroot "${ROOTFS_PATH}" ln -sf /data/ispv_root /ispv_root
     find ${APP_CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -a {} ${ROOTFS_PATH} \;
 fi
 
@@ -499,7 +505,7 @@ then
     UUID_DATAFS=$(/bin/lsblk -o UUID -n ${DATAFS_PARTITION})
 cat <<EOF > ${ROOTFS_PATH}/etc/fstab
 UUID=${UUID_ROOTFS}  /          ext4  errors=remount-ro  0  1
-UUID=${UUID_DATAFS}  /data      vfat  uid=polar,gid=polar  0  2
+UUID=${UUID_DATAFS}  /data      vfat  uid=${IMAGE_USER},gid=${IMAGE_USER}  0  2
 EOF
 
     console_log "### Install bootloader ###"
