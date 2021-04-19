@@ -28,7 +28,7 @@ pipeline {
         stage('Prepare') {
             steps {
                 checkout scm
-                copyArtifacts(projectName: "pds-cutter-ngs/develop", filter: "pds-cutter_*.deb", flatten: true, target: "packages/deb/")
+                copyArtifacts(projectName: "pds-cutter-ngs/${params.sourceBranch}", filter: "pds-cutter_*.deb", flatten: true, target: "packages/deb/")
                 copyArtifacts(projectName: "qtopcua-upstream", filter: "qtopcua-bin_5.15.0-1.tar.gz", flatten: true, target: "packages/tarballs/")
                 sh """#!/bin/bash
 					if [ -f ${SCRIPT_DIR} ]; then
