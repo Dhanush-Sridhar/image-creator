@@ -18,9 +18,9 @@ x11vnc -wait 50 -noxdamage -display :0 -forever -o /var/log/x11vnc.log -bg -view
 mkdir -p ${HOME}/usb
 mountpoint -q ${HOME}/usb || sudo mount --bind /mnt ${HOME}/usb
 
-if [ -e "/opt/pds-cutter/pds_cutter" ]
+if [ -e "/opt/pds_cutter" ]
 then
-    /opt/pds-cutter/pds_cutter 2>&1 | systemd-cat -t pds-cutter
+    DISABLE_CURSOR=true LD_LIBRARY_PATH=/opt/qt5-15-2/lib /opt/pds_cutter 2>&1 | systemd-cat -t pds-cutter
 else
     /usr/bin/xterm
 fi

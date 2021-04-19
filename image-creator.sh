@@ -37,7 +37,7 @@ PERMISSIONS_CONF="${ROOTFS_CONF_PATH}/permissions.conf"
 IMAGE_USER="polar"
 IMAGE_PASSWORD="evis32"
 IMAGE_HOSTNAME="pcm-cutter-ngs"
-QT_VERSION="5.15.0"
+#QT_VERSION="5.15.0"
 VNC_PASSWORD="${IMAGE_PASSWORD}"
 
 # default options
@@ -46,13 +46,13 @@ ENTER_CHROOT="NO"
 IMAGE_TYPE="production"
 
 # package lists
-QT_SHORT_VERSION="$(echo ${QT_VERSION%.*} | tr -d '.')"
+#QT_SHORT_VERSION="$(echo ${QT_VERSION%.*} | tr -d '.')"
 BASE_IMAGE_PACKAGES="sudo apt-utils"
 RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox xterm network-manager x11-xserver-utils libmbedtls12 apt-offline psmisc dosfstools lsscsi x11vnc vsftpd"
 DEV_IMAGE_PACKAGES="git xvfb flex bison libxcursor-dev libxcomposite-dev build-essential libssl-dev libxcb1-dev libgl1-mesa-dev libmbedtls-dev"
 DEB_DEV_PACKAGES="dpkg-dev dh-make devscripts git-buildpackage quilt"
 INSTALLATION_IMAGE_PACKAGES="gdisk"
-QT_IMAGE_PACKAGES="qt${QT_SHORT_VERSION}declarative qt${QT_SHORT_VERSION}quickcontrols2 qt${QT_SHORT_VERSION}graphicaleffects qt${QT_SHORT_VERSION}svg qt${QT_SHORT_VERSION}serialport"
+#QT_IMAGE_PACKAGES="qt${QT_SHORT_VERSION}declarative qt${QT_SHORT_VERSION}quickcontrols2 qt${QT_SHORT_VERSION}graphicaleffects qt${QT_SHORT_VERSION}svg qt${QT_SHORT_VERSION}serialport"
 
 # option lists
 ARCH_LIST="i386 amd64 armel armhf"
@@ -298,10 +298,10 @@ if [ ! -z "${IMAGE_TYPE}" ]
 then
     case ${IMAGE_TYPE} in
         production)
-            IMAGE_PACKAGE_LIST="${RUNTIME_IMAGE_PACKAGES} ${QT_IMAGE_PACKAGES}"
+            IMAGE_PACKAGE_LIST="${RUNTIME_IMAGE_PACKAGES}"
             ;;
         development)
-            IMAGE_PACKAGE_LIST="${QT_IMAGE_PACKAGES} ${DEV_IMAGE_PACKAGES} ${DEB_DEV_PACKAGES}"
+            IMAGE_PACKAGE_LIST="${DEV_IMAGE_PACKAGES} ${DEB_DEV_PACKAGES}"
             ;;
         installation)
             IMAGE_PACKAGE_LIST="${INSTALLATION_IMAGE_PACKAGES} ${RUNTIME_IMAGE_PACKAGES}"
@@ -398,7 +398,7 @@ then
     then
         chroot ${ROOTFS_PATH} ${APT_CMD} update
         chroot ${ROOTFS_PATH} ${APT_CMD} -y install software-properties-common
-        chroot ${ROOTFS_PATH} add-apt-repository -y ppa:beineri/opt-qt-${QT_VERSION}-${DISTRO}
+        #chroot ${ROOTFS_PATH} add-apt-repository -y ppa:beineri/opt-qt-${QT_VERSION}-${DISTRO}
     fi
 fi
 
