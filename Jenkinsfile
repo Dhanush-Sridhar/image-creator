@@ -6,7 +6,7 @@ pipeline {
 		// actual there is no loop target posible
         //choice choices: ['installer', 'tarball', 'loop'], description: 'Image target', name: 'imageTarget'
         choice choices: ['installer', 'tarball'], description: 'Image target', name: 'imageTarget'
-        choice choices: ['develop'], description: 'Source branch', name: 'srcBranch'
+        choice choices: ['develop', 'prototype'], description: 'Application source branch', name: 'sourceBranch'
         choice choices: ['amd64'], description: 'Image architecture', name: 'imageArch'
         choice choices: ['focal'], description: 'Image distro', name: 'imageDistro'
     }
