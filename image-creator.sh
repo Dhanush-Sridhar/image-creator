@@ -13,7 +13,7 @@ DISTRO="focal"
 DEBOOTSTRAP_OPTIONS=""
 
 # default (file) paths
-INSTALLER_SCRIPT="${SCRIPT_PATH}/image-installer.sh"
+INSTALLER_SCRIPT="${WORK_PATH}/image-installer.sh"
 ROOTFS_IMAGE_FILE="${WORK_PATH}/rootfs.img"
 ROOTFS_TARBALL="${WORK_PATH}/rootfs.tar.bz2"
 ROOTFS_PATH="${WORK_PATH}/rootfs"
