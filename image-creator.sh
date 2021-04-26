@@ -535,7 +535,9 @@ if [ "${IMAGE_TARGET_TYPE}" = "tarball" -o "${IMAGE_TARGET_TYPE}" = "installer" 
 then
     console_log "### Create rootfs tarball ###"
     pushd "${ROOTFS_PATH}" &> /dev/null
-    sudo -u $SUDO_USER tar -cjf ${ROOTFS_TARBALL} *
+    tar -cjf ${ROOTFS_TARBALL} * || exit 1
+    chgrp $SUDO_GID "${ROOTFS_TARBALL}"
+    chown $SUDO_USER "${ROOTFS_TARBALL}"
     popd &> /dev/null
 
     if [ "${IMAGE_TARGET_TYPE}" = "installer" ]
