@@ -31,8 +31,10 @@ pipeline {
                 copyArtifacts(projectName: "pds-cutter-ngs/${params.sourceBranch}", filter: "pds-cutter_*.deb", flatten: true, target: "packages/deb/")
                 copyArtifacts(projectName: "qtopcua-upstream", filter: "qtopcua-bin_5.15.0-1.tar.gz", flatten: true, target: "packages/tarballs/")
                 sh """#!/bin/bash
+					echo "use application package from pds-cutter-ngs/${params.sourceBranch}"
+					ls -l ${WORKSPACE}/packages/deb/*.deb
 					if [ -f ${SCRIPT_DIR} ]; then
-						echo "${SCRIPT_DIR} is a file"
+						echo "${SCRIPT_DIR} is a file => remove!"
 						##echo "--- ${SCRIPT_DIR} ---"
 						##cat ${SCRIPT_DIR}
 						##echo "---"
