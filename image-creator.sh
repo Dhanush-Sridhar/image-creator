@@ -505,7 +505,7 @@ do
     chroot "${ROOTFS_PATH}" chmod ${FILE_PERM} ${FILE_NAME}
 done
 
-## TODO: add system tool calls for app in sudoers (mount, etc...)
+## add system tool calls for application in sudoers (mount, etc...)
 ##
 # ALL       ALL =(ALL) NOPASSWD: /bin/mount
 # ALL       ALL =(ALL) NOPASSWD: /bin/umount
@@ -514,6 +514,17 @@ done
 # ALL       ALL =(ALL) NOPASSWD: /sbin/halt
 # ALL       ALL =(ALL) NOPASSWD: /sbin/hwclock
 ##
+    console_log "### Configure sudoers ###"
+    chroot "${ROOTFS_PATH}" chmod +w /etc/sudoers
+    echo -e "\n## Polar Cutter Application Calls" >> ${ROOTFS_PATH}/etc/sudoers
+    echo -e "ALL\tALL =(ALL) NOPASSWD: /bin/mount" >> ${ROOTFS_PATH}/etc/sudoers
+    echo -e "ALL\tALL =(ALL) NOPASSWD: /bin/umount" >> ${ROOTFS_PATH}/etc/sudoers
+    echo -e "ALL\tALL =(ALL) NOPASSWD: /bin/date" >> ${ROOTFS_PATH}/etc/sudoers
+    echo -e "ALL\tALL =(ALL) NOPASSWD: /sbin/reboot" >> ${ROOTFS_PATH}/etc/sudoers
+    echo -e "ALL\tALL =(ALL) NOPASSWD: /sbin/halt" >> ${ROOTFS_PATH}/etc/sudoers
+    echo -e "ALL\tALL =(ALL) NOPASSWD: /sbin/hwclock" >> ${ROOTFS_PATH}/etc/sudoers
+    echo -e "## ---\n" >> ${ROOTFS_PATH}/etc/sudoers
+    chroot "${ROOTFS_PATH}" chmod -w /etc/sudoers
 
 if [ "${ENTER_CHROOT}" = "YES" ]
 then
