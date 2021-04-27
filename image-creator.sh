@@ -505,6 +505,16 @@ do
     chroot "${ROOTFS_PATH}" chmod ${FILE_PERM} ${FILE_NAME}
 done
 
+## TODO: add system tool calls for app in sudoers (mount, etc...)
+##
+# ALL       ALL =(ALL) NOPASSWD: /bin/mount
+# ALL       ALL =(ALL) NOPASSWD: /bin/umount
+# ALL       ALL =(ALL) NOPASSWD: /bin/date
+# ALL       ALL =(ALL) NOPASSWD: /sbin/reboot
+# ALL       ALL =(ALL) NOPASSWD: /sbin/halt
+# ALL       ALL =(ALL) NOPASSWD: /sbin/hwclock
+##
+
 if [ "${ENTER_CHROOT}" = "YES" ]
 then
     chroot "${ROOTFS_PATH}"
