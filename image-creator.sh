@@ -2,18 +2,10 @@
 
 [ ! -z "${DEBUG}" ] && set -x
 
-echo ""
-echo "############################################"
-echo "# Ubuntu image creator                     #"
-echo "# -----------------------------------------#"
-echo "# Author: Benjamin Federau                 #"
-echo "#         <benjamin.federau@basyskom.com>  #"
-echo "############################################"
-echo ""
-
 ####################### Variables #######################
 
 SCRIPT_PATH="$(dirname $(readlink -f $0))"
+WORK_PATH="$PWD"
 # debootstrap defaults
 APT_CMD="apt"
 ARCH="amd64"
@@ -21,16 +13,16 @@ DISTRO="focal"
 DEBOOTSTRAP_OPTIONS=""
 
 # default (file) paths
-INSTALLER_SCRIPT="${SCRIPT_PATH}/image-installer.sh"
-ROOTFS_IMAGE_FILE="${SCRIPT_PATH}/rootfs.img"
-ROOTFS_TARBALL="${SCRIPT_PATH}/rootfs.tar.bz2"
-ROOTFS_PATH="${SCRIPT_PATH}/rootfs"
-DATAFS_PATH="${SCRIPT_PATH}/rootfs/data"
-ROOTFS_CONF_PATH="${SCRIPT_PATH}/confs/system"
-APP_CONF_PATH="${SCRIPT_PATH}/confs/app"
-PKG_DEB_PATH="${SCRIPT_PATH}/packages/deb"
-PKG_TARBALLS_PATH="${SCRIPT_PATH}/packages/tarballs"
-PKG_BINARIES_PATH="${SCRIPT_PATH}/packages/binaries"
+INSTALLER_SCRIPT="${WORK_PATH}/image-installer.sh"
+ROOTFS_IMAGE_FILE="${WORK_PATH}/rootfs.img"
+ROOTFS_TARBALL="${WORK_PATH}/rootfs.tar.bz2"
+ROOTFS_PATH="${WORK_PATH}/rootfs"
+DATAFS_PATH="${WORK_PATH}/rootfs/data"
+ROOTFS_CONF_PATH="${WORK_PATH}/confs/system"
+APP_CONF_PATH="${WORK_PATH}/confs/app"
+PKG_DEB_PATH="${WORK_PATH}/packages/deb"
+PKG_TARBALLS_PATH="${WORK_PATH}/packages/tarballs"
+PKG_BINARIES_PATH="${WORK_PATH}/packages/binaries"
 PERMISSIONS_CONF="${ROOTFS_CONF_PATH}/permissions.conf"
 
 # default image configs
@@ -60,6 +52,18 @@ IMAGE_TYPE_LIST="production development installation"
 
 ####################### Functions #######################
 
+function about() {
+echo "############################################"
+echo "# Ubuntu image creator                     #"
+echo "# ---------------------------------------- #"
+echo "# Author: Benjamin Federau                 #"
+echo "#         <benjamin.federau@basyskom.com>  #"
+echo "# ---------------------------------------- #"
+echo "# (c) Adolf Mohr Maschinenfabrik           #"
+echo "############################################"
+echo ""
+}
+
 function usage() {
     echo "Usage: $(basename $0) <options>"
     echo ""
@@ -73,7 +77,7 @@ function usage() {
     echo "      Default: ${DISTRO}"
     echo ""
     echo "  --image-target <string> :"
-    echo "      Specifies the image target. The option string can be either \"loop\", /dev/sdX, \"tarball\" or \"installer\"."
+    echo "      Specifies the image target. The option string can be either \"loop\", /dev/sdX, \"tarball\", \"installer\" or \"none\"."
     echo ""
     echo "  --image-type <string> :"
     echo "      Specifies the image type. Available image types: ${IMAGE_TYPE_LIST// /, }"
@@ -193,6 +197,7 @@ do
             shift
             ;;
         -h|--help)
+            about
             usage
             exit 0
             shift
@@ -269,7 +274,7 @@ then
     case ${IMAGE_TARGET} in
         loop)
             IMAGE_TARGET_TYPE="loop"
-            [ "${CLEAN}" = "YES" ] && rm -f "${SCRIPT_PATH}/"*.img
+            [ "${CLEAN}" = "YES" ] && rm -f "${WORK_PATH}/"*.img
             ;;
         *dev*)
             IMAGE_TARGET_TYPE="dev"
@@ -279,15 +284,21 @@ then
             ;;
         tarball)
             IMAGE_TARGET_TYPE="tarball"
-            [ "${CLEAN}" = "YES" ] && rm -f "${SCRIPT_PATH}/"*.tar.*
+            [ "${CLEAN}" = "YES" ] && rm -f "${WORK_PATH}/"*.tar.*
             ;;
         installer)
             IMAGE_TARGET_TYPE="installer"
-            [ "${CLEAN}" = "YES" ] && rm -f "${SCRIPT_PATH}/"*.tar.* "${SCRIPT_PATH}/"*.bin
+            [ "${CLEAN}" = "YES" ] && rm -f "${WORK_PATH}/"*.tar.* "${WORK_PATH}/"*.bin
+            ;;
+        none)
+            IMAGE_TARGET_TYPE="none"
+            [ "${CLEAN}" = "YES" ] && rm -f "${WORK_PATH}/"*.tar.* "${WORK_PATH}/"*.bin "${WORK_PATH}/"*.img
+            ##echo $SUDO_USER
+            exit 0
             ;;
         *)
             console_log "Unknown image target ${IMAGE_TARGET}!"
-            console_log "Available image types: loop | /dev/sdX | tarball | installer"
+            console_log "Available image types: loop | /dev/sdX | tarball | installer | none"
             console_log ""
             exit 1
             ;;
@@ -318,7 +329,8 @@ then
     ROOTFS_TARBALL="${ROOTFS_TARBALL//rootfs/rootfs-${IMAGE_TYPE}}"
 fi
 
-mkdir -p "${ROOTFS_PATH}" "${PKG_DEB_PATH}" "${PKG_TARBALLS_PATH}" "${PKG_BINARIES_PATH}"
+mkdir -p "${ROOTFS_PATH}"
+sudo -u $SUDO_USER mkdir -p "${PKG_DEB_PATH}" "${PKG_TARBALLS_PATH}" "${PKG_BINARIES_PATH}"
 
 ####################### Main #######################
 
@@ -493,6 +505,27 @@ do
     chroot "${ROOTFS_PATH}" chmod ${FILE_PERM} ${FILE_NAME}
 done
 
+## add system tool calls for application in sudoers (mount, etc...)
+##
+# ALL       ALL =(ALL) NOPASSWD: /bin/mount
+# ALL       ALL =(ALL) NOPASSWD: /bin/umount
+# ALL       ALL =(ALL) NOPASSWD: /bin/date
+# ALL       ALL =(ALL) NOPASSWD: /sbin/reboot
+# ALL       ALL =(ALL) NOPASSWD: /sbin/halt
+# ALL       ALL =(ALL) NOPASSWD: /sbin/hwclock
+##
+    console_log "### Configure sudoers ###"
+    chroot "${ROOTFS_PATH}" chmod +w /etc/sudoers
+    echo -e "\n## Polar Cutter Application Calls" >> ${ROOTFS_PATH}/etc/sudoers
+    echo -e "ALL\tALL =(ALL) NOPASSWD: /bin/mount" >> ${ROOTFS_PATH}/etc/sudoers
+    echo -e "ALL\tALL =(ALL) NOPASSWD: /bin/umount" >> ${ROOTFS_PATH}/etc/sudoers
+    echo -e "ALL\tALL =(ALL) NOPASSWD: /bin/date" >> ${ROOTFS_PATH}/etc/sudoers
+    echo -e "ALL\tALL =(ALL) NOPASSWD: /sbin/reboot" >> ${ROOTFS_PATH}/etc/sudoers
+    echo -e "ALL\tALL =(ALL) NOPASSWD: /sbin/halt" >> ${ROOTFS_PATH}/etc/sudoers
+    echo -e "ALL\tALL =(ALL) NOPASSWD: /sbin/hwclock" >> ${ROOTFS_PATH}/etc/sudoers
+    echo -e "## ---\n" >> ${ROOTFS_PATH}/etc/sudoers
+    chroot "${ROOTFS_PATH}" chmod -w /etc/sudoers
+
 if [ "${ENTER_CHROOT}" = "YES" ]
 then
     chroot "${ROOTFS_PATH}"
@@ -523,21 +556,27 @@ if [ "${IMAGE_TARGET_TYPE}" = "tarball" -o "${IMAGE_TARGET_TYPE}" = "installer" 
 then
     console_log "### Create rootfs tarball ###"
     pushd "${ROOTFS_PATH}" &> /dev/null
-    tar -cjf ${ROOTFS_TARBALL} *
+    tar -cjf ${ROOTFS_TARBALL} * || exit 1
+    chgrp $SUDO_GID "${ROOTFS_TARBALL}"
+    chown $SUDO_USER "${ROOTFS_TARBALL}"
     popd &> /dev/null
 
     if [ "${IMAGE_TARGET_TYPE}" = "installer" ]
     then
-        INSTALLER_BINARY="${SCRIPT_PATH}/${IMAGE_TYPE}-image-installer_$(date '+%Y%m%d%H%M%S').bin"
+        INSTALLER_BINARY="${WORK_PATH}/${IMAGE_TYPE}-image-installer_$(date '+%Y%m%d%H%M%S').bin"
         cat "${INSTALLER_SCRIPT}" "${ROOTFS_TARBALL}" > "${INSTALLER_BINARY}"
         chmod +x "${INSTALLER_BINARY}"
-        ln -sf "${INSTALLER_BINARY}" "${SCRIPT_PATH}/${IMAGE_TYPE}-image-installer_latest.bin"
+        chgrp $SUDO_GID "${INSTALLER_BINARY}"
+        chown $SUDO_USER "${INSTALLER_BINARY}"
+        sudo -u $SUDO_USER ln -sf "${INSTALLER_BINARY}" "${WORK_PATH}/${IMAGE_TYPE}-image-installer_latest.bin"
+        ##echo installer done here...
+        ##ls -l "${INSTALLER_BINARY}"
     fi
 fi
 
 if [ "${IMAGE_TYPE}" = "installation" ]
 then
-    LATEST_INSTALLER_BINARY="$(readlink -f "${SCRIPT_PATH}/production-image-installer_latest.bin")"
+    LATEST_INSTALLER_BINARY="$(readlink -f "${WORK_PATH}/production-image-installer_latest.bin")"
     if [ -e "${LATEST_INSTALLER_BINARY}" ]
     then
         cp ${LATEST_INSTALLER_BINARY} "${ROOTFS_PATH}/home/${IMAGE_USER}/"
