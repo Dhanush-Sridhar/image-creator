@@ -20,7 +20,7 @@ mountpoint -q ${HOME}/usb || sudo mount --bind /mnt ${HOME}/usb
 
 if [ -e "/opt/pds_cutter" ]
 then
-    DISABLE_CURSOR=true LD_LIBRARY_PATH=/opt/qt5-15-1/lib /opt/pds_cutter 2>&1 | systemd-cat -t pds-cutter
+    LD_LIBRARY_PATH=/opt/qt5-15-1/lib /opt/pds_cutter 2>&1 | systemd-cat -t pds-cutter
 else
     /usr/bin/xterm
 fi
