@@ -561,7 +561,7 @@ then
     chown $SUDO_USER "${ROOTFS_TARBALL}"
     popd &> /dev/null
 
-    if [ "${IMAGE_TARGET_TYPE}" = "installer" -o "${IMAGE_TARGET_TYPE}" = "installation" ]
+    if [ "${IMAGE_TARGET_TYPE}" = "installer" -o "${IMAGE_TYPE}" = "installation" ]
     then
         INSTALLER_BINARY="${WORK_PATH}/${IMAGE_TYPE}-image-installer_$(date '+%Y%m%d%H%M%S').bin"
         cat "${INSTALLER_SCRIPT}" "${ROOTFS_TARBALL}" > "${INSTALLER_BINARY}"
