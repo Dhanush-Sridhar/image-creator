@@ -179,6 +179,7 @@ do
             ;;
         --clean)
             CLEAN="YES"
+			[ -e "${_ROOTFS_PATH}" ] && umount_dev_sys_proc "${ROOTFS_PATH}" || echo "No rootfs left mounted, good."
             rm -rf "${ROOTFS_PATH}"
             shift
             ;;
