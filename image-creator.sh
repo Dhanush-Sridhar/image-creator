@@ -179,7 +179,7 @@ do
             ;;
         --clean)
             CLEAN="YES"
-			[ -e "${_ROOTFS_PATH}" ] && umount_dev_sys_proc "${ROOTFS_PATH}" || echo "No rootfs left mounted, good."
+			[ -e "${_ROOTFS_PATH}" ] && umount_dev_sys_proc "${ROOTFS_PATH}" || echo "No remaining mount to rootfs. Clean canvas! :)"
             rm -rf "${ROOTFS_PATH}"
             shift
             ;;
@@ -221,6 +221,9 @@ set -- "${POSITIONAL[@]}" # restore positional parameters
 
 DEBOOTSTRAP_CMD="$(which debootstrap)"
 QEMU_DEBOOTSTRAP_CMD="$(which qemu-debootstrap)"
+
+console_log "Generate target=${IMAGE_TARGET} type=${IMAGE_TYPE}"
+console_log ""
 
 if [ -z "${DEBOOTSTRAP_CMD}" -o -z "${QEMU_DEBOOTSTRAP_CMD}" ]
 then

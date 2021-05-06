@@ -59,23 +59,8 @@ pipeline {
 					## copy script to run from destination (for sudo reason)
 					echo "copy ${IMAGE_CREATOR_ORG} to ${SCRIPT_DIR}/"
 					cp ${IMAGE_CREATOR_ORG} ${SCRIPT_DIR}/
-                """
-            }
-        }
-		// only for some test reason
-		/*
-        stage('Research') {
-            steps {
-                sh """#!/bin/bash
-					##ls -l
-					##ls -l ${WORKSPACE}/..
-					##ls -l ${WORKSPACE}
-					##echo "--- workspaces ---"
-					##cat ${WORKSPACE}/../workspaces.txt
-					##echo "---"
-					##ls -l ${WORKSPACE}/../image-creator
-					##ls -l ${WORKSPACE}/../image-creator/rootfs
-					##ls -l ${SCRIPT_DIR}/
+					
+					## script output 4 verifikation
 					echo "used script:"
 					ls -l ${IMAGE_CREATOR}
 					echo "---"
@@ -84,7 +69,6 @@ pipeline {
                 """
             }
         }
-		*/
         stage('Rootfs Tarball') {
             when {
                 expression { params.imageTarget == "tarball" }
