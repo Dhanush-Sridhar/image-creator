@@ -19,9 +19,9 @@ pipeline {
 
     environment {
 		SCRIPT_DIR="/var/lib/jenkins/scripts"
-        IMAGE_CREATOR_ORG="${WORKSPACE}/image-creator.sh"
-        IMAGE_CREATOR_DIR="${SCRIPT_DIR}"
-        IMAGE_CREATOR="${IMAGE_CREATOR_DIR}/image-creator.sh"
+		IMAGE_CREATOR_NAME="image-creator.sh"
+        IMAGE_CREATOR_ORG="${WORKSPACE}/${IMAGE_CREATOR_NAME}"
+        IMAGE_CREATOR="${SCRIPT_DIR}/${IMAGE_CREATOR_NAME}"
     }
 
     stages {
@@ -33,20 +33,32 @@ pipeline {
                 sh """#!/bin/bash
 					echo "use application package from pds-cutter-ngs/${params.sourceBranch}"
 					ls -l ${WORKSPACE}/packages/deb/*.deb
+					
+					## just if something went wrong before
 					if [ -f ${SCRIPT_DIR} ]; then
 						echo "${SCRIPT_DIR} is a file => remove!"
-						##echo "--- ${SCRIPT_DIR} ---"
-						##cat ${SCRIPT_DIR}
-						##echo "---"
 						rm -f ${SCRIPT_DIR}
 					fi
+					
+					## create script destination directory
 					if [ ! -d ${SCRIPT_DIR} ]; then
 						echo "create ${SCRIPT_DIR}"
 						mkdir -p ${SCRIPT_DIR}/
 					fi
-					echo copy ${IMAGE_CREATOR_ORG} to ${SCRIPT_DIR}/
+
+ 					## remove old script
+					if [ -f ${IMAGE_CREATOR} ]; then
+						echo "revove old ${IMAGE_CREATOR}!"
+						rm -f ${IMAGE_CREATOR}
+						## control output
+						echo "---"
+						ls -l ${SCRIPT_DIR}/*.sh
+						echo "---"
+					fi
+					
+					## copy script to run from destination (for sudo reason)
+					echo "copy ${IMAGE_CREATOR_ORG} to ${SCRIPT_DIR}/"
 					cp ${IMAGE_CREATOR_ORG} ${SCRIPT_DIR}/
-					##ls -l ${SCRIPT_DIR}/*.sh
                 """
             }
         }
