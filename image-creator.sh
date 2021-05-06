@@ -580,13 +580,13 @@ fi
 
 if [ "${IMAGE_TYPE}" = "installation" ]
 then
-    LATEST_INSTALLER_BINARY="$(readlink -f "${WORK_PATH}/production-image-installer_latest.bin")"
+    LATEST_INSTALLER_BINARY="$(readlink -f "${WORK_PATH}/${IMAGE_TYPE}-image-installer_latest.bin")"
     if [ -e "${LATEST_INSTALLER_BINARY}" ]
     then
         cp ${LATEST_INSTALLER_BINARY} "${ROOTFS_PATH}/home/${IMAGE_USER}/"
     else
         console_log "Image installer binary not found!"
-        console_log "Please create a production image installer binary first!"
+        console_log "Please create a ${IMAGE_TYPE} image installer binary first!"
         console_log "e.g.: $0 --arch amd64 --distro focal --image-target installer --image-type production"
         exit 1
     fi
