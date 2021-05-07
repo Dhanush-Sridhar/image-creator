@@ -34,13 +34,14 @@ VNC_PASSWORD="${IMAGE_PASSWORD}"
 
 # default options
 CLEAN="NO"
+INSTALL_QT="NO"
 ENTER_CHROOT="NO"
 IMAGE_TYPE="production"
 
 # package lists
 QT_SHORT_VERSION="$(echo ${QT_VERSION%.*} | tr -d '.')"
 BASE_IMAGE_PACKAGES="sudo apt-utils"
-RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox xterm network-manager x11-xserver-utils libmbedtls12 apt-offline psmisc dosfstools lsscsi x11vnc vsftpd"
+RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox xterm network-manager x11-xserver-utils libmbedtls12 apt-offline psmisc dosfstools lsscsi x11vnc vsftpd libxcb-* libxkbcommon-x11-0 net-tools lsof htop nano"
 DEV_IMAGE_PACKAGES="git xvfb flex bison libxcursor-dev libxcomposite-dev build-essential libssl-dev libxcb1-dev libgl1-mesa-dev libmbedtls-dev"
 DEB_DEV_PACKAGES="dpkg-dev dh-make devscripts git-buildpackage quilt"
 INSTALLATION_IMAGE_PACKAGES="gdisk"
@@ -82,6 +83,9 @@ function usage() {
     echo "  --image-type <string> :"
     echo "      Specifies the image type. Available image types: ${IMAGE_TYPE_LIST// /, }"
     echo "      Default: ${IMAGE_TYPE}"
+    echo ""
+    echo "  --install-qt :"
+    echo "      Installs the Stephan Binner qt version 5.15.0 ubuntu package."
     echo ""
     echo "  --clean :"
     echo "      Cleans the image-creator environment (rootfs, image files, tarballs, ...)."
@@ -181,6 +185,10 @@ do
             CLEAN="YES"
 			[ -e "${ROOTFS_PATH}" ] && umount_dev_sys_proc "${ROOTFS_PATH}" || echo "No remaining mount to rootfs. Clean canvas! :)"
             rm -rf "${ROOTFS_PATH}"
+            shift
+            ;;
+        --install-qt)
+            INSTALL_QT="YES"
             shift
             ;;
         --enter-chroot)
@@ -313,7 +321,12 @@ if [ ! -z "${IMAGE_TYPE}" ]
 then
     case ${IMAGE_TYPE} in
         production)
-            IMAGE_PACKAGE_LIST="${RUNTIME_IMAGE_PACKAGES} ${QT_IMAGE_PACKAGES}"
+	    if [ ${INSTALL_QT} = "YES" ]
+	    then
+                IMAGE_PACKAGE_LIST="${RUNTIME_IMAGE_PACKAGES} ${QT_IMAGE_PACKAGES}"
+	    else
+                IMAGE_PACKAGE_LIST="${RUNTIME_IMAGE_PACKAGES}"
+	    fi
             ;;
         development)
             IMAGE_PACKAGE_LIST="${QT_IMAGE_PACKAGES} ${DEV_IMAGE_PACKAGES} ${DEB_DEV_PACKAGES}"
@@ -414,7 +427,10 @@ then
     then
         chroot ${ROOTFS_PATH} ${APT_CMD} update
         chroot ${ROOTFS_PATH} ${APT_CMD} -y install software-properties-common
-        chroot ${ROOTFS_PATH} add-apt-repository -y ppa:beineri/opt-qt-${QT_VERSION}-${DISTRO}
+        if [ ${INSTALL_QT} = "YES" ]
+        then
+            chroot ${ROOTFS_PATH} add-apt-repository -y ppa:beineri/opt-qt-${QT_VERSION}-${DISTRO}
+        fi
     fi
 fi
 
@@ -442,12 +458,15 @@ chroot ${ROOTFS_PATH} ${APT_CMD} -y clean
 console_log "### Install local packages to the rootfs ###"
 if [ "${IMAGE_TYPE}" != "installation" ]
 then
-    ## Tarball packages
-    for TAR_FILE in $(ls -1 ${PKG_TARBALLS_PATH}/*.tar*)
-    do
-        console_log "## Install $(basename ${TAR_FILE}) to rootfs ##"
-        tar -xf ${TAR_FILE} -C ${ROOTFS_PATH}
-    done
+    if [ ${INSTALL_QT} = "YES" ]
+    then
+        ## Tarball packages
+        for TAR_FILE in $(ls -1 ${PKG_TARBALLS_PATH}/*.tar*)
+        do
+            console_log "## Install $(basename ${TAR_FILE}) to rootfs ##"
+            tar -xf ${TAR_FILE} -C ${ROOTFS_PATH}
+        done
+    fi
 
     ## Debian packages
     mount -o bind "${PKG_DEB_PATH}" "${ROOTFS_PATH}/mnt"
