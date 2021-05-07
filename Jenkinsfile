@@ -28,8 +28,17 @@ pipeline {
         stage('Prepare') {
             steps {
                 checkout scm
+				
+                sh """#!/bin/bash
+					## remove old packages
+					rm ${WORKSPACE}/packages/deb/*.deb
+                """
+ 
                 copyArtifacts(projectName: "pds-cutter-ngs/${params.sourceBranch}", filter: "pds-cutter_*.deb", flatten: true, target: "packages/deb/")
                 copyArtifacts(projectName: "qtopcua-upstream", filter: "qtopcua-bin_5.15.0-1.tar.gz", flatten: true, target: "packages/tarballs/")
+				
+				archiveArtifacts artifacts: "packages/deb/pds-cutter_*.deb", fingerprint: true
+				
                 sh """#!/bin/bash
 					echo "use application package from pds-cutter-ngs/${params.sourceBranch}"
 					ls -l ${WORKSPACE}/packages/deb/*.deb
