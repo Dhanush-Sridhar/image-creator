@@ -76,9 +76,6 @@ pipeline {
             steps {
                 sh """#!/bin/bash
                      sudo ${IMAGE_CREATOR} --arch ${params.imageArch} --distro ${params.imageDistro} --image-target tarball --image-type ${params.imageType} --clean
-					 ##echo "target ist stored to \'${SCRIPT_DIR}/\' - todo: should be stored to workspace"
-					 ##echo "workaround is a target copy"
-					 ##cp ${SCRIPT_DIR}/*.tar.bz2 ${WORKSPACE}/
                 """
 				archiveArtifacts artifacts: "*.tar.bz2", fingerprint: true
             }
@@ -93,11 +90,8 @@ pipeline {
             steps {
                 sh """#!/bin/bash
                      sudo ${IMAGE_CREATOR} --arch ${params.imageArch} --distro ${params.imageDistro} --image-target installer --image-type production --clean
-					 ##echo "target ist stored to \'${SCRIPT_DIR}/\' - todo: should be stored to workspace"
-					 ##echo "workaround is a target copy"
-					 ##cp ${SCRIPT_DIR}/*.bin ${WORKSPACE}/
                 """
-				archiveArtifacts artifacts: "*.bin", fingerprint: true
+				archiveArtifacts artifacts: "*installer_2*.bin", fingerprint: true
             }
         }
 		// this does actual not work on the jenkins server
