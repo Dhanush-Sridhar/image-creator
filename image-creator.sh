@@ -179,7 +179,7 @@ do
             ;;
         --clean)
             CLEAN="YES"
-			[ -e "${_ROOTFS_PATH}" ] && umount_dev_sys_proc "${ROOTFS_PATH}" || echo "No remaining mount to rootfs. Clean canvas! :)"
+			[ -e "${ROOTFS_PATH}" ] && umount_dev_sys_proc "${ROOTFS_PATH}" || echo "No remaining mount to rootfs. Clean canvas! :)"
             rm -rf "${ROOTFS_PATH}"
             shift
             ;;
