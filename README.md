@@ -13,7 +13,7 @@ Set the rootfs distribution. A list of available distributions can be found at /
 **Default:** focal
 
 - `--image-target <string>`
-Specifiy the image target. The following output targets are available:
+  Specifiy the image target. The following output targets are available:
   - **loop:**
   The loop target option creates an .img file with the image which can be installed on a (USB/harddisk) device via the dd commmand. The size of the .img file is 16GB and contains a rootfs (8GB) partition and a datafs (8GB) partition.
   - **/dev/sdX:**
@@ -23,15 +23,17 @@ Specifiy the image target. The following output targets are available:
   - **installer:**
   The installer target option creates a executable .bin file which provides an installer to install the image. In combination with a bootable Linux Live system the installer is the best option to install the image on new devices.
   
-
 - `--image-type <string>`
-Specifiy the image type. The following image types are provided by the script:
+  Specifiy the image type. The following image types are provided by the script:
   - **production**
-  The production image conatins the runtime dependencies and packages for the applications. This image type should be used in combination with the installer target (see --image-target).
+    The production image conatins the runtime dependencies and packages for the applications. This image type should be used in combination with the installer target (see --image-target).
   - **development**
-  The development image is meant to be used as a chroot to build the applications. It has the development dependecies and packages installed. The image has no X environment, but can also be installed on a device.
+    The development image is meant to be used as a chroot to build the applications. It has the development dependecies and packages installed. The image has no X environment, but can also be installed on a device.
   - **installation**
-  The installation image creates a minimal Live system which can be used in combination with the installer binary (installer needs to be copied in the installations image) to install the image on a new device. The image has no runtime dependecies or packages for the applications itself but all needed functionality to install images from an external location.
+    The installation image creates a minimal Live system which can be used in combination with the installer binary (installer needs to be copied in the installations image) to install the image on a new device. The image has no runtime dependecies or packages for the applications itself but all needed functionality to install images from an external location.
+
+- `--install-qt`
+Installs the Stephan Binner qt version 5.15.0 ubuntu package.
 
 - `--clean`
 Clean the image-creator environment before creating images.
