@@ -20,7 +20,7 @@ mountpoint -q ${HOME}/usb || sudo mount --bind /mnt ${HOME}/usb
 
 if [ -e "/opt/pds-cutter/pds_cutter" ]
 then
-    PLC_IP=192.168.1.122 /opt/pds-cutter/pds_cutter 2>&1 | systemd-cat -t pds-cutter
+    PLC_IP=192.168.1.121 /opt/pds-cutter/pds_cutter 2>&1 | systemd-cat -t pds-cutter
 else
     /usr/bin/xterm
 fi
