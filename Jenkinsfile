@@ -31,7 +31,7 @@ pipeline {
 				
                 sh """#!/bin/bash
 					## remove old packages
-					rm ${WORKSPACE}/packages/deb/*.deb
+					rm ${WORKSPACE}/packages/deb/*.deb || true
                 """
  
                 copyArtifacts(projectName: "pds-cutter-ngs/${params.sourceBranch}", filter: "pds-cutter_*.deb", flatten: true, target: "packages/deb/")
