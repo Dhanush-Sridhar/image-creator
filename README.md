@@ -70,7 +70,31 @@ $> ./image-creator.sh --arch amd64 --distro focal --image-target /dev/sdb --imag
 --> /dev/sdb
 ```
 
+
+
+## Peaklab-Version
+
+Build the application locally on a linux machine (without Jenkins-Server).
+
+- **Step 1:** Execute the following commands in the `pm_pcm_cutter_v3` repository to create a debian-package of the application
+
+```sh
+# Notice: at first time this command may take several minutes to hours depending on your system
+docker build -f Dockerfile.peaklab -t temp .
+
+docker run --rm temp > pds_cutter.deb
+```
+
+- **Step 2:** Copy the output into the image-creator directory 
+
+   `/image-creator/packages/deb/pds_cutter.deb`
+
+- **Step 3:** Run the the image-creator script on branch peaklab-version
+
+  <span style="color:red;font-weight:bold">TODO: verify correct procedure with Mathis</span>
+
 # Image-Installer
+
 The image-installer script is used from the image-creator script to generate the image installer binary (see: image-creator.sh --image-target installer). 
 
 ## Comandline options

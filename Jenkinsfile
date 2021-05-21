@@ -9,6 +9,8 @@ pipeline {
         choice choices: ['develop', 'prototype'], description: 'Application source branch', name: 'sourceBranch'
         choice choices: ['amd64'], description: 'Image architecture', name: 'imageArch'
         choice choices: ['focal'], description: 'Image distro', name: 'imageDistro'
+        // option to install b&r site manager
+        //choice choices: ['yes', 'no'], description: 'Install SiteManager', name: 'siteManager'
     }
     
     options {
@@ -36,7 +38,8 @@ pipeline {
  
                 copyArtifacts(projectName: "pds-cutter-ngs/${params.sourceBranch}", filter: "pds-cutter_*.deb", flatten: true, target: "packages/deb/")
                 copyArtifacts(projectName: "qtopcua-upstream", filter: "qtopcua-bin_5.15.0-1.tar.gz", flatten: true, target: "packages/tarballs/")
-				
+				copyArtifacts(projectName: "b&r-sitemanager", filter: "SiteManager_Installer.zip", flatten: true, target: "packages/sitemanager/")
+
 				archiveArtifacts artifacts: "packages/deb/pds-cutter_*.deb", fingerprint: true
 				
                 sh """#!/bin/bash
