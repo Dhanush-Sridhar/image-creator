@@ -18,9 +18,17 @@ x11vnc -wait 50 -noxdamage -display :0 -forever -o /var/log/x11vnc.log -bg -view
 mkdir -p ${HOME}/usb
 mountpoint -q ${HOME}/usb || sudo mount --bind /mnt ${HOME}/usb
 
-if [ -e "/opt/pds-cutter/pds_cutter" ]
+
+if [ -e "/opt/starthmi.sh" ]
 then
-    PLC_IP=192.168.1.121 /opt/pds-cutter/pds_cutter 2>&1 | systemd-cat -t pds-cutter
+	## script should be installed with the application package
+    /opt/starthmi.sh
 else
-    /usr/bin/xterm
+	## old style may not successful if library path is no set properly
+	if [ -e "/opt/pds-cutter/pds_cutter" ]
+	then
+		PLC_IP=192.168.1.121 /opt/pds-cutter/pds_cutter 2>&1 | systemd-cat -t pds-cutter
+	else
+		/usr/bin/xterm
+	fi
 fi
