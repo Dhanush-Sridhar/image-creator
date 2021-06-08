@@ -41,7 +41,7 @@ IMAGE_TYPE="production"
 # package lists
 QT_SHORT_VERSION="$(echo ${QT_VERSION%.*} | tr -d '.')"
 BASE_IMAGE_PACKAGES="sudo apt-utils"
-RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox xterm network-manager x11-xserver-utils libmbedtls12 apt-offline psmisc dosfstools lsscsi x11vnc vsftpd libxcb-* libxkbcommon-x11-0 net-tools lsof htop nano"
+RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox xterm network-manager x11-xserver-utils libmbedtls12 apt-offline psmisc dosfstools lsscsi x11vnc vsftpd libxcb-* libxkbcommon-x11-0 net-tools lsof htop nano ntp"
 DEV_IMAGE_PACKAGES="git xvfb flex bison libxcursor-dev libxcomposite-dev build-essential libssl-dev libxcb1-dev libgl1-mesa-dev libmbedtls-dev"
 DEB_DEV_PACKAGES="dpkg-dev dh-make devscripts git-buildpackage quilt"
 INSTALLATION_IMAGE_PACKAGES="gdisk"
@@ -527,6 +527,12 @@ do
     chroot "${ROOTFS_PATH}" chown ${FILE_OWNER} ${FILE_NAME}
     chroot "${ROOTFS_PATH}" chmod ${FILE_PERM} ${FILE_NAME}
 done
+
+## ntp cofiguration
+   console_log "### ntp configuration ###"
+   mv ${ROOTFS_PATH}/etc/ntp.conf ${ROOTFS_PATH}/etc/ntp.conf.standard
+   # copy target ntp configuration
+   install -m 0644 ${ROOTFS_CONF_PATH}/etc/ntp.conf ${ROOTFS_PATH}/etc/
 
 ## add system tool calls for application in sudoers (mount, etc...)
 ##
