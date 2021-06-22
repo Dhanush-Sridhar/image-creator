@@ -23,7 +23,7 @@ APP_CONF_PATH="${WORK_PATH}/confs/app"
 PKG_DEB_PATH="${WORK_PATH}/packages/deb"
 PKG_TARBALLS_PATH="${WORK_PATH}/packages/tarballs"
 PKG_BINARIES_PATH="${WORK_PATH}/packages/binaries"
-PKG_SITEMANAGER_PATH="${WORK_PATH}/packages/sitemanager/br_sitemanager"
+PKG_SITEMANAGER_PATH="${WORK_PATH}/packages/sitemanager/br_sitemanager" #TODO: find a better solution (i.e. tarball)
 PERMISSIONS_CONF="${ROOTFS_CONF_PATH}/permissions.conf"
 
 # default image configs
@@ -481,10 +481,9 @@ then
     ## Binary files
     find ${PKG_BINARIES_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -r {} ${ROOTFS_PATH} \;
 
-    # SiteManager (Remote Maintenance)
-    #cd SiteManager_Installer && ./install.sh
+    ## SiteManager (Remote Maintenance)
     echo "Install Site-Manager for Remote Maintenance"
-    cd ${PKG_SITEMANAGER_PATH} && ./install.sh 
+    cd ${PKG_SITEMANAGER_PATH} && chroot "${ROOTFS_PATH}" ./install.sh 
     echo "Site-Manager installation complete."
 fi
 
