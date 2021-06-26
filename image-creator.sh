@@ -23,7 +23,7 @@ APP_CONF_PATH="${WORK_PATH}/confs/app"
 PKG_DEB_PATH="${WORK_PATH}/packages/deb"
 PKG_TARBALLS_PATH="${WORK_PATH}/packages/tarballs"
 PKG_BINARIES_PATH="${WORK_PATH}/packages/binaries"
-PKG_SITEMANAGER_PATH="${WORK_PATH}/packages/sitemanager/br_sitemanager" #TODO: find a better solution (i.e. tarball)
+PKG_SITEMANAGER_PATH="${WORK_PATH}/packages/sitemanager" # copy tarball here
 PERMISSIONS_CONF="${ROOTFS_CONF_PATH}/permissions.conf"
 
 # default image configs
@@ -64,6 +64,11 @@ echo "# ---------------------------------------- #"
 echo "# (c) Adolf Mohr Maschinenfabrik           #"
 echo "############################################"
 echo ""
+echo "Hint:"
+echo "Make sure that the debian package o(pds_cutter application) and the sitemanager tarball are copied into the image-creator repo"
+echo "Dir-Path:" 
+echo "/image-creator/packages/deb/PDS-Cutter_timestemp.deb"
+echo "/image-creator/packages/sitemanager/SiteManager.tar"
 }
 
 function usage() {
@@ -483,7 +488,31 @@ then
 
     ## SiteManager (Remote Maintenance)
     echo "Install Site-Manager for Remote Maintenance"
-    cd ${PKG_SITEMANAGER_PATH} && chroot "${ROOTFS_PATH}" ./install.sh 
+    
+	for TAR_FILE in $(ls -1 ${PKG_SITEMANAGER_PATH}/*.tar*)
+	do
+	    console_log "## Install $(basename ${TAR_FILE}) to rootfs ##"
+	    tar -xf ${TAR_FILE} -C ${ROOTFS_PATH}/home && cd ${ROOTFS_PATH}/home/SiteManager_Installer/ && ./install.sh
+	done    
+    
+    #mount -o bind "${PKG_SITEMANAGER_PATH}" "${ROOTFS_PATH}/mnt"
+    #for TAR_FILE in $(ls -1 ${PKG_SITEMANAGER_PATH}/*.tar)
+    #do
+    #    console_log "## Copy $(basename ${TAR_FILE}) to rootfs ##"
+    #    chroot "${ROOTFS_PATH}" tar -xvf "/mnt/$(basename ${TAR_FILE})" && pwd && ls /-alt
+    #    #bash ${PKG_SITEMANAGER_PATH})/INSTALL_SITEMANAGER
+    #done
+    #umount "${ROOTFS_PATH}/mnt"
+
+    
+    #### failure    
+    #cd ${PKG_SITEMANAGER_PATH} && echo "${PKG_SITEMANAGER_PATH}"
+    #cp ${PKG_SITEMANAGER_PATH} ${ROOTFS_PATH}/${PKG_SITEMANAGER_PATH}
+    #chroot "${ROOTFS_PATH}" && cd ${ROOTFS_PATH}/${PKG_SITEMANAGER_PATH}
+    #tar -xvf SiteManager.tar
+
+    #tar -xvf SiteManager.tar && chroot "${ROOTFS_PATH}" ${PKG_SITEMANAGER_PATH}/INSTALL_SITEMANAGER
+    #rm SiteManager.tar
     echo "Site-Manager installation complete."
 fi
 
