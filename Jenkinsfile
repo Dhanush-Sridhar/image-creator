@@ -10,7 +10,7 @@ pipeline {
         choice choices: ['amd64'], description: 'Image architecture', name: 'imageArch'
         choice choices: ['focal'], description: 'Image distro', name: 'imageDistro'
         // option to install b&r site manager
-        //choice choices: ['yes', 'no'], description: 'Install SiteManager', name: 'siteManager'
+        choice choices: ['yes', 'no'], description: 'Install SiteManager', name: 'siteManager'
     }
     
     options {
@@ -31,14 +31,23 @@ pipeline {
             steps {
                 checkout scm
 				
+				//
+				// do some cleaning... (clean up after build would hide some result steps)
+				//
                 sh """#!/bin/bash
 					## remove old packages
 					rm ${WORKSPACE}/packages/deb/*.deb || true
+					
+					## remove old site manager
+					rm ${WORKSPACE}/packages/sitemanager/*.tar* || true
+					
+					## remove rootfs
+                    echo "clean..."
+					sudo ${IMAGE_CREATOR} --clean --image-target none
                 """
  
                 copyArtifacts(projectName: "pds-cutter-ngs/${params.sourceBranch}", filter: "pds-cutter_*.deb", flatten: true, target: "packages/deb/")
                 copyArtifacts(projectName: "qtopcua-upstream", filter: "qtopcua-bin_5.15.0-1.tar.gz", flatten: true, target: "packages/tarballs/")
-				copyArtifacts(projectName: "sitemanagertar/master", filter: "SiteManager.tar", flatten: true, target: "packages/sitemanager/")
 
 				archiveArtifacts artifacts: "packages/deb/pds-cutter_*.deb", fingerprint: true
 				
@@ -81,6 +90,16 @@ pipeline {
                 """
             }
         }
+		
+        stage('Fetch SiteManager') {
+            when {
+                expression { params.siteManager == "yes" }
+            }
+            steps {
+				copyArtifacts(projectName: "sitemanagertar/master", filter: "SiteManager.tar", flatten: true, target: "packages/sitemanager/")
+            }
+        }
+		
         stage('Rootfs Tarball') {
             when {
                 expression { params.imageTarget == "tarball" }
@@ -92,6 +111,7 @@ pipeline {
 				archiveArtifacts artifacts: "*.tar.bz2", fingerprint: true
             }
         }
+		
         stage('Image Installerscript') {
             when {
                 anyOf {
@@ -106,6 +126,7 @@ pipeline {
 				archiveArtifacts artifacts: "*installer_2*.bin", fingerprint: true
             }
         }
+		
 		// this does actual not work on the jenkins server
 		/*
         stage('Bootable Image') {
@@ -119,6 +140,8 @@ pipeline {
             }
         }
 		*/
+		
+		/*
         stage('Clean Up') {
             steps {
                 sh """#!/bin/bash
@@ -131,5 +154,6 @@ pipeline {
                 """
             }
         }
+		*/
     }
 }
