@@ -492,8 +492,8 @@ then
 	for TAR_FILE in $(ls -1 ${PKG_SITEMANAGER_PATH}/*.tar*)
 	do
 	    console_log "## Install $(basename ${TAR_FILE}) to rootfs ##"
-	    tar -xf ${TAR_FILE} -C ${ROOTFS_PATH}/home
-        chroot ${ROOTFS_PATH} /home/SiteManager_Installer/install.sh
+	    tar -xf ${TAR_FILE} -C ${ROOTFS_PATH}/tmp
+        chroot "${ROOTFS_PATH}" /home/SiteManager_Installer/install.sh
 	done    
     
     #mount -o bind "${PKG_SITEMANAGER_PATH}" "${ROOTFS_PATH}/mnt"
