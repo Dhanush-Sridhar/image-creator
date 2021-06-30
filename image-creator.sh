@@ -493,32 +493,14 @@ then
 	do
 	    console_log "## Install $(basename ${TAR_FILE}) to rootfs ##"
 	    tar -xf ${TAR_FILE} -C ${ROOTFS_PATH}/tmp
-        chroot "${ROOTFS_PATH}" ls "/tmp/"
+        chroot "${ROOTFS_PATH}" ls -al "/tmp/"
+# Hint: this is formated because of EOF to pipe the install.sh script to chroot
         cat << EOF | chroot "${ROOTFS_PATH}" 
-cd /tmp/SiteManager_Installer/
-./install.sh
+        cd /tmp/SiteManager_Installer/
+        ./install.sh
 EOF
-        chroot "${ROOTFS_PATH}" ls "/tmp/"
+        chroot "${ROOTFS_PATH}" rm -r "/tmp/SiteManager_Installer" && chroot "${ROOTFS_PATH}" rm -r "/tmp/INSTALL_SITEMANAGER"
     done
-    
-    #mount -o bind "${PKG_SITEMANAGER_PATH}" "${ROOTFS_PATH}/mnt"
-    #for TAR_FILE in $(ls -1 ${PKG_SITEMANAGER_PATH}/*.tar)
-    #do
-    #    console_log "## Copy $(basename ${TAR_FILE}) to rootfs ##"
-    #    chroot "${ROOTFS_PATH}" tar -xvf "/mnt/$(basename ${TAR_FILE})" && pwd && ls /-alt
-    #    #bash ${PKG_SITEMANAGER_PATH})/INSTALL_SITEMANAGER
-    #done
-    #umount "${ROOTFS_PATH}/mnt"
-
-    
-    #### failure    
-    #cd ${PKG_SITEMANAGER_PATH} && echo "${PKG_SITEMANAGER_PATH}"
-    #cp ${PKG_SITEMANAGER_PATH} ${ROOTFS_PATH}/${PKG_SITEMANAGER_PATH}
-    #chroot "${ROOTFS_PATH}" && cd ${ROOTFS_PATH}/${PKG_SITEMANAGER_PATH}
-    #tar -xvf SiteManager.tar
-
-    #tar -xvf SiteManager.tar && chroot "${ROOTFS_PATH}" ${PKG_SITEMANAGER_PATH}/INSTALL_SITEMANAGER
-    #rm SiteManager.tar
     echo "Site-Manager installation complete."
 fi
 
@@ -606,6 +588,8 @@ then
     console_log "### Install fstab ###"
     UUID_ROOTFS=$(/bin/lsblk -o UUID -n ${ROOTFS_PARTITION})
     UUID_DATAFS=$(/bin/lsblk -o UUID -n ${DATAFS_PARTITION})
+    echo "Default fstab before modification:"
+    cat /etc/fstab
 cat <<EOF > ${ROOTFS_PATH}/etc/fstab
 UUID=${UUID_ROOTFS}  /          ext4  errors=remount-ro  0  1
 UUID=${UUID_DATAFS}  /data      vfat  uid=${IMAGE_USER},gid=${IMAGE_USER}  0  2
