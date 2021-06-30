@@ -493,7 +493,7 @@ then
 	do
 	    console_log "## Install $(basename ${TAR_FILE}) to rootfs ##"
 	    tar -xf ${TAR_FILE} -C ${ROOTFS_PATH}/tmp
-        chroot "${ROOTFS_PATH}" /tmp/SiteManager_Installer/install.sh
+        chroot "${ROOTFS_PATH}" bash "/tmp/SiteManager_Installer/install.sh" || chroot "${ROOTFS_PATH}" cat "/tmp/SiteManager_Installer/install.sh"
 	done    
     
     #mount -o bind "${PKG_SITEMANAGER_PATH}" "${ROOTFS_PATH}/mnt"
