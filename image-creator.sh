@@ -495,10 +495,12 @@ then
 	    tar -xf ${TAR_FILE} -C ${ROOTFS_PATH}/tmp
         chroot "${ROOTFS_PATH}" ls -al "/tmp/"
 # Hint: this is formated because of EOF to pipe the install.sh script to chroot
+# ---
         cat << EOF | chroot "${ROOTFS_PATH}" 
         cd /tmp/SiteManager_Installer/
         ./install.sh
 EOF
+# ---
         chroot "${ROOTFS_PATH}" rm -r "/tmp/SiteManager_Installer" && chroot "${ROOTFS_PATH}" rm -r "/tmp/INSTALL_SITEMANAGER"
     done
     echo "Site-Manager installation complete."
@@ -590,10 +592,13 @@ then
     UUID_DATAFS=$(/bin/lsblk -o UUID -n ${DATAFS_PARTITION})
     echo "Default fstab before modification:"
     cat /etc/fstab
+# write fstab
+# ---
 cat <<EOF > ${ROOTFS_PATH}/etc/fstab
 UUID=${UUID_ROOTFS}  /          ext4  errors=remount-ro  0  1
 UUID=${UUID_DATAFS}  /data      vfat  uid=${IMAGE_USER},gid=${IMAGE_USER}  0  2
 EOF
+# ---
 
     console_log "### Install bootloader ###"
     chmod -x "${ROOTFS_PATH}/etc/grub.d/30_os-prober"
