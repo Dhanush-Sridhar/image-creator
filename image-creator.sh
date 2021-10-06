@@ -2,10 +2,13 @@
 
 [ ! -z "${DEBUG}" ] && set -x
 
-####################### Variables #######################
+###################################################################################################
+# VARIABLES
+###################################################################################################
 
 SCRIPT_PATH="$(dirname $(readlink -f $0))"
 WORK_PATH="$PWD"
+
 # debootstrap defaults
 APT_CMD="apt"
 ARCH="amd64"
@@ -20,10 +23,11 @@ ROOTFS_PATH="${WORK_PATH}/rootfs"
 DATAFS_PATH="${WORK_PATH}/rootfs/data"
 ROOTFS_CONF_PATH="${WORK_PATH}/confs/system"
 APP_CONF_PATH="${WORK_PATH}/confs/app"
-PKG_DEB_PATH="${WORK_PATH}/packages/deb"
+PKG_DEB_PATH="${WORK_PATH}/packages/deb"                    # copy <HMI>.deb here
 PKG_TARBALLS_PATH="${WORK_PATH}/packages/tarballs"
-PKG_BINARIES_PATH="${WORK_PATH}/packages/binaries"
-PKG_SITEMANAGER_PATH="${WORK_PATH}/packages/sitemanager" # copy tarball here
+PKG_BINARIES_PATH="${WORK_PATH}/packages/binaries"          # copy <HMI>.bin here
+PKG_SITEMANAGER_PATH="${WORK_PATH}/packages/sitemanager"    # copy sitemanager tarball here
+PKG_RTL8188DRIVER_PATH="${WORK_PATH}/packages/drivers/"     # copy rtl8188eu master-branch dir here
 PERMISSIONS_CONF="${ROOTFS_CONF_PATH}/permissions.conf"
 
 # default image configs
@@ -36,23 +40,36 @@ VNC_PASSWORD="${IMAGE_PASSWORD}"
 # default options
 CLEAN="NO"
 INSTALL_QT="NO"
+INSTALL_WIFI="NO"
 ENTER_CHROOT="NO"
 IMAGE_TYPE="production"
+
 
 # package lists
 #QT_SHORT_VERSION="$(echo ${QT_VERSION%.*} | tr -d '.')"
 BASE_IMAGE_PACKAGES="sudo apt-utils"
-RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox xterm network-manager x11-xserver-utils libmbedtls12 apt-offline psmisc dosfstools lsscsi x11vnc vsftpd libxcb-* libxkbcommon-x11-0 net-tools lsof htop nano ntp"
-DEV_IMAGE_PACKAGES="git xvfb flex bison libxcursor-dev libxcomposite-dev build-essential libssl-dev libxcb1-dev libgl1-mesa-dev libmbedtls-dev"
+RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox xterm network-manager x11-xserver-utils libmbedtls12 apt-offline psmisc dosfstools lsscsi x11vnc vsftpd libxcb-* libxkbcommon-x11-0 net-tools lsof htop nano ntp usbutils unzip lshw"
+DEV_IMAGE_PACKAGES="git xvfb flex bison libxcursor-dev libxcomposite-dev build-essential libssl-dev libxcb1-dev libgl1-mesa-dev libmbedtls-dev unzip"
 DEB_DEV_PACKAGES="dpkg-dev dh-make devscripts git-buildpackage quilt"
 INSTALLATION_IMAGE_PACKAGES="gdisk"
+BLUETOOTH_PACKAGES="bluez bluez-cups bluez-obexd"
 #QT_IMAGE_PACKAGES="qt${QT_SHORT_VERSION}declarative qt${QT_SHORT_VERSION}quickcontrols2 qt${QT_SHORT_VERSION}graphicaleffects qt${QT_SHORT_VERSION}svg qt${QT_SHORT_VERSION}serialport"
+
+# tag::TODO 
+# configure QWebView 
+# https://wiki.qt.io/QtWebEngine/How_to_Try
+# https://stackoverflow.com/questions/47100545/how-to-build-qtwebengine-5-10-from-source
+WEBVIEW_PACKAGES="libssl-dev libxcursor-dev libxcomposite-dev libxdamage-dev libxrandr-dev libfontconfig1-dev libxss-dev libsrtp0-dev libwebp-dev libjsoncpp-dev libopus-dev libminizip-dev libavutil-dev libavformat-dev libavcodec-dev libevent-dev libvpx-dev libsnappy-dev libre2-dev libprotobuf-dev protobuf-compiler"
+# end::TODO
 
 # option lists
 ARCH_LIST="i386 amd64 armel armhf"
 IMAGE_TYPE_LIST="production development installation"
 
-####################### Functions #######################
+
+###################################################################################################
+# FUNCTIONS
+###################################################################################################
 
 function about() {
 echo "############################################"
@@ -92,6 +109,9 @@ function usage() {
     echo ""
     echo "  --install-qt :"
     echo "      Installs the Stephan Binner qt version 5.15.0 ubuntu package."
+    echo ""
+    echo "  --install-wifi :"
+    echo "      Installs Wi-Fi driver for Edimax N150 (EW7811UnV2/EW-7611ULB)"
     echo ""
     echo "  --clean :"
     echo "      Cleans the image-creator environment (rootfs, image files, tarballs, ...)."
@@ -169,9 +189,13 @@ function mount_rootfs_datafs() {
     mount "${_DATAFS_PARTITION}" "${_DATAFS_PATH}" || error "Could not mount ${_DATAFS_PARTITION} to ${_DATAFS_PATH}!"
 }
 
-####################### Parameters #######################
 
-POSITIONAL=()
+###################################################################################################
+# PARAMETERS
+###################################################################################################
+
+## COMMAND-LINE ARGUMENTS / TRIGGER
+POSITIONAL=() 
 while [[ $# -gt 0 ]]
 do
     key="$1"
@@ -197,6 +221,10 @@ do
             INSTALL_QT="YES"
             shift
             ;;
+        --install-wifi)
+            INSTALL_WIFI="YES"
+            shift
+            ;;    
         --enter-chroot)
             ENTER_CHROOT="YES"
             shift
@@ -229,7 +257,9 @@ done
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
 
-####################### Checks #######################
+###################################################################################################
+# CHECKS
+###################################################################################################
 
 [ "$(whoami)" != "root" ] && console_log "You must be root or use the sudo command!" && exit 1
 
@@ -323,17 +353,18 @@ then
     esac
 fi
 
+## Packages to install
 if [ ! -z "${IMAGE_TYPE}" ]
 then
     case ${IMAGE_TYPE} in
         production)
-            IMAGE_PACKAGE_LIST="${RUNTIME_IMAGE_PACKAGES}"
+            IMAGE_PACKAGE_LIST="${RUNTIME_IMAGE_PACKAGES} ${BLUETOOTH_PACKAGES} ${DEB_DEV_PACKAGES}"
             ;;
         development)
-            IMAGE_PACKAGE_LIST="${DEV_IMAGE_PACKAGES} ${DEB_DEV_PACKAGES}"
+            IMAGE_PACKAGE_LIST="${DEV_IMAGE_PACKAGES} ${DEB_DEV_PACKAGES} ${BLUETOOTH_PACKAGES} ${WEBVIEW_PACKAGES}"
             ;;
         installation)
-            IMAGE_PACKAGE_LIST="${INSTALLATION_IMAGE_PACKAGES} ${RUNTIME_IMAGE_PACKAGES}"
+            IMAGE_PACKAGE_LIST="${INSTALLATION_IMAGE_PACKAGES} ${RUNTIME_IMAGE_PACKAGES} ${BLUETOOTH_PACKAGES}"
             ;;
         *)
             console_log "Unknown image type ${IMAGE_TYPE}!"
@@ -350,10 +381,21 @@ fi
 mkdir -p "${ROOTFS_PATH}"
 sudo -u $SUDO_USER mkdir -p "${PKG_DEB_PATH}" "${PKG_TARBALLS_PATH}" "${PKG_BINARIES_PATH}"
 
-####################### Main #######################
+
+###################################################################################################
+###################################################################################################
+#                                                                                                 #
+#                                           MAIN                                                  #
+#                                                                                                 #
+###################################################################################################
+###################################################################################################
 
 export DEBIAN_FRONTEND=noninteractive
 
+
+###############################################################################
+# LOOP
+###############################################################################
 if [ "${IMAGE_TARGET_TYPE}" = "loop" ]
 then
     if [ ! -e "${ROOTFS_IMAGE_FILE}" ]
@@ -375,6 +417,9 @@ then
     mount_rootfs_datafs "${ROOTFS_PARTITION}" "${ROOTFS_PATH}" "${DATAFS_PARTITION}" "${DATAFS_PATH}"
 fi
 
+###############################################################################
+# DEV
+###############################################################################
 if [ "${IMAGE_TARGET_TYPE}" = "dev" ]
 then
     BOOT_PARTITION="${IMAGE_TARGET}1"
@@ -453,9 +498,13 @@ chroot ${ROOTFS_PATH} ${APT_CMD} update
 chroot ${ROOTFS_PATH} ${APT_CMD} -y install ${IMAGE_PACKAGE_LIST}
 chroot ${ROOTFS_PATH} ${APT_CMD} -y clean
 
+###############################################################################
+# ALL BUT INSTALLATION
+###############################################################################
 console_log "### Install local packages to the rootfs ###"
 if [ "${IMAGE_TYPE}" != "installation" ]
 then
+    #################### Qt 5.15.0 by Stephan Binner ##########################################################
     if [ ${INSTALL_QT} = "YES" ]
     then
         ## Tarball packages
@@ -466,7 +515,8 @@ then
         done
     fi
 
-    ## Debian packages
+
+    #################### Debian packages ##########################################################
     mount -o bind "${PKG_DEB_PATH}" "${ROOTFS_PATH}/mnt"
     for DEB_FILE in $(ls -1 ${PKG_DEB_PATH}/*.deb)
     do
@@ -478,7 +528,8 @@ then
     ## Binary files
     find ${PKG_BINARIES_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -r {} ${ROOTFS_PATH} \;
 
-    ## SiteManager (Remote Maintenance)
+
+    #################### SiteManager (Remote Maintenance) #########################################
     echo "Install Site-Manager for Remote Maintenance"
     
 	for TAR_FILE in $(ls -1 ${PKG_SITEMANAGER_PATH}/*.tar*)
@@ -496,6 +547,53 @@ EOF
         chroot "${ROOTFS_PATH}" rm -r "/tmp/SiteManager_Installer" && chroot "${ROOTFS_PATH}" rm -r "/tmp/INSTALL_SITEMANAGER"
     done
     echo "Site-Manager installation complete."
+
+
+    #################### RTL8188EU driver for Bluetooth/WiFi USB-Adapter ##########################
+    if [ ${INSTALL_WIFI} = "YES" ]
+    then
+        ## Install RTL8188eu driver
+        #for TAR_FILE in $(ls -1 ${PKG_TARBALLS_PATH}/*.tar*)
+        #do
+        #    console_log "## Install $(basename ${TAR_FILE}) to rootfs ##"
+        #    tar -xf ${TAR_FILE} -C ${ROOTFS_PATH}
+        #done
+
+        console_log "## Install RTL8188EU Bluetooth/WiFi driver to rootfs ##"
+    
+# Hint: this is formated because of EOF to pipe the install.sh script to chroot
+# ---
+        cat << EOF | chroot "${ROOTFS_PATH}"
+        git clone https://github.com/lwfinger/rtl8188eu.git 
+        cd rtl8188eu-master
+        make all
+        sudo make install
+        cp rtl8188eufw.bin /lib/firmware/rtlwifi/rtl8188eufw.bin
+        
+        touch /etc/NetworkManager/conf.d/80-wifi.conf
+        echo "[device]" > /etc/NetworkManager/conf.d/80-wifi.conf
+        echo "wifi.scan-rand-mac-address=no" >> /etc/NetworkManager/conf.d/80-wifi.conf
+EOF
+# ---
+
+        #chroot "${ROOTFS_PATH}"
+        #chroot ${ROOTFS_PATH} git clone https://github.com/lwfinger/rtl8188eu.git && cd rtl8188eu-master
+        #chroot ${ROOTFS_PATH} cd rtl8188eu-master
+
+        #make all
+        #sudo make install
+
+        # copy firmware      
+        
+
+        # Avoid 'NetworkManager does not list SSID' issue
+        #touch /etc/NetworkManager/conf.d/80-wifi.conf
+        #echo "[device]" > 80-wifi.conf
+        #echo "wifi.scan-rand-mac-address=no" >> 80-wifi.conf
+        #systemctl restart NetworkManager
+
+        console_log "RTL8188EU driver installation complete."
+    fi
 fi
 
 console_log "### User management ###"
@@ -504,8 +602,8 @@ echo -e "${IMAGE_PASSWORD}\n${IMAGE_PASSWORD}\n" | chroot ${ROOTFS_PATH} passwd 
 chroot ${ROOTFS_PATH} adduser --gecos "" --disabled-password ${IMAGE_USER}
 chroot ${ROOTFS_PATH} usermod -a -G sudo,video,audio,plugdev ${IMAGE_USER}
 
-chroot ${ROOTFS_PATH} adduser --gecos "" --disabled-password --force-badname BoxPC
-echo -e "BoxPC\nBoxPC\n" | chroot ${ROOTFS_PATH} passwd BoxPC
+chroot ${ROOTFS_PATH} adduser --gecos "" --disabled-password --force-badname BoxPC                  #TODO: changePW
+echo -e "BoxPC\nBoxPC\n" | chroot ${ROOTFS_PATH} passwd BoxPC                                       #TODO: changePW
 
 echo -e "${IMAGE_PASSWORD}\n${IMAGE_PASSWORD}\n" | chroot ${ROOTFS_PATH} passwd ${IMAGE_USER}
 
@@ -517,6 +615,9 @@ find ${ROOTFS_CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -r {} ${ROOTFS
 echo "${IMAGE_HOSTNAME}" > ${ROOTFS_PATH}/etc/hostname
 sed -i "s/replace-me/${IMAGE_HOSTNAME}/g" ${ROOTFS_PATH}/etc/hosts
 
+###############################################################################
+# DEVELOPMENT 
+###############################################################################
 if [ "${IMAGE_TYPE}" != "development" ]
 then
     sed -i "s/NODM_ENABLED=false/NODM_ENABLED=true/g" ${ROOTFS_PATH}/etc/default/nodm
@@ -532,6 +633,9 @@ then
     chroot "${ROOTFS_PATH}" chown -R ${IMAGE_USER}:${IMAGE_USER} /home/${IMAGE_USER}/.vnc/
 fi
 
+###############################################################################
+# PRODUCTION
+###############################################################################
 if [ "${IMAGE_TYPE}" = "production" ]
 then
     chroot "${ROOTFS_PATH}" ln -sf /data/ispv_root /ispv_root
@@ -580,6 +684,9 @@ then
     chroot "${ROOTFS_PATH}"
 fi
 
+###############################################################################
+# DEV / LOOP 
+###############################################################################
 if [ "${IMAGE_TARGET_TYPE}" = "dev" -o "${IMAGE_TARGET_TYPE}" = "loop" ]
 then
     console_log "### Install fstab ###"
@@ -606,6 +713,9 @@ sync
 
 umount_dev_sys_proc "${ROOTFS_PATH}"
 
+###############################################################################
+# TARBALL / INSTALLER
+###############################################################################
 if [ "${IMAGE_TARGET_TYPE}" = "tarball" -o "${IMAGE_TARGET_TYPE}" = "installer" ]
 then
     console_log "### Create rootfs tarball ###"
@@ -628,6 +738,9 @@ then
     fi
 fi
 
+###############################################################################
+# INSTALLATION
+###############################################################################
 if [ "${IMAGE_TYPE}" = "installation" ]
 then
     LATEST_INSTALLER_BINARY="$(readlink -f "${WORK_PATH}/${IMAGE_TYPE}-image-installer_latest.bin")"

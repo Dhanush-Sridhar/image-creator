@@ -6,7 +6,7 @@ connection
 id=Polarsmart
 uuid=1f1a0e9b-67a2-4cda-9c9f-854b04277a89
 type=wifi
-interface-name=wlx801f02af01f3
+interface-name=wlx08beac19d1fe
 permissions=
 
 [wifi]
