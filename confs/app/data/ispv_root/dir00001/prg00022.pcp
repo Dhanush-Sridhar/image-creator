@@ -1,0 +1,132 @@
+<?PM-XML version="1.0" encoding="UTF-8" ?>
+<polar_cut_program version="1.1">
+   <application  name="unknown" >
+      <security_query>01ODIDPHOB</security_query>
+   </application>
+   <program_info>
+      <value  id="1" type="job_name" >Eltroctact</value>
+   </program_info>
+   <program_global>
+      <creation_time_stamp>
+         <date>
+            <year>2021</year>
+            <month>8</month>
+            <day>16</day>
+         </date>
+         <time>
+            <hour>8</hour>
+            <minute>45</minute>
+            <second>46</second>
+         </time>
+      </creation_time_stamp>
+      <write_protection>0</write_protection>
+      <alignment_adjustment_1>0</alignment_adjustment_1>
+      <alignment_adjustment_2>0</alignment_adjustment_2>
+      <author>NPRO-</author>
+      <owner>NPRO-</owner>
+      <npro_order>test1</npro_order>
+   </program_global>
+   <program_parameters/>
+   <program_steps>
+      <cut_step number="1" type="0" >
+         <measure>427</measure>
+         <spezial_function id="3"/>
+         <spezial_function id="5"/>
+      </cut_step>
+      <cut_step number="2" type="6" >
+         <comment  type="4" ></comment>
+         <storage_number>7471207</storage_number>
+      </cut_step>
+      <cut_step number="3" type="0" >
+         <measure>584</measure>
+         <spezial_function id="3"/>
+         <spezial_function id="5"/>
+      </cut_step>
+      <cut_step number="4" type="6" >
+         <comment  type="4" ></comment>
+         <storage_number>1580772112</storage_number>
+      </cut_step>
+      <cut_step number="5" type="0" >
+         <measure>413</measure>
+         <spezial_function id="3"/>
+         <spezial_function id="5"/>
+      </cut_step>
+      <cut_step number="6" type="6" >
+         <comment  type="5" ></comment>
+         <storage_number>1580772112</storage_number>
+      </cut_step>
+      <cut_step number="7" type="0" >
+         <measure>499.5</measure>
+         <spezial_function id="5"/>
+      </cut_step>
+      <cut_step number="8" type="6" >
+         <comment  type="1" ></comment>
+         <storage_number>1580885216</storage_number>
+      </cut_step>
+      <cut_step number="9" type="0" >
+         <measure>483.5</measure>
+         <spezial_function id="3"/>
+         <spezial_function id="5"/>
+      </cut_step>
+      <cut_step number="10" type="6" >
+         <comment  type="5" ></comment>
+         <storage_number>17367051</storage_number>
+      </cut_step>
+      <cut_step number="11" type="0" >
+         <measure>217.5</measure>
+         <spezial_function id="5"/>
+      </cut_step>
+      <cut_step number="12" type="0" >
+         <measure>211.5</measure>
+         <spezial_function id="3"/>
+         <spezial_function id="5"/>
+      </cut_step>
+      <cut_step number="13" type="6" >
+         <comment  type="5" ></comment>
+         <storage_number>1342518504</storage_number>
+      </cut_step>
+      <cut_step number="14" type="0" >
+         <measure>388</measure>
+      </cut_step>
+      <cut_step number="15" type="2" >
+         <measure>96.9999</measure>
+         <spezial_function id="4"/>
+      </cut_step>
+      <cut_step number="16" type="3" >
+         <count>3</count>
+      </cut_step>
+      <cut_step number="17" type="4" >
+         <count>3</count>
+      </cut_step>
+      <cut_step number="18" type="0" >
+         <measure>414</measure>
+         <spezial_function id="8"/>
+      </cut_step>
+      <cut_step number="19" type="6" >
+         <comment  type="2" ></comment>
+         <storage_number>1580885216</storage_number>
+      </cut_step>
+      <cut_step number="20" type="2" >
+         <measure>54</measure>
+         <spezial_function id="4"/>
+      </cut_step>
+      <cut_step number="21" type="3" >
+         <count>1</count>
+      </cut_step>
+      <cut_step number="22" type="2" >
+         <measure>6</measure>
+         <spezial_function id="4"/>
+         <spezial_function id="3"/>
+      </cut_step>
+      <cut_step number="23" type="3" >
+         <count>1</count>
+      </cut_step>
+      <cut_step number="24" type="4" >
+         <count>12</count>
+      </cut_step>
+   </program_steps>
+   <program_graphic/>
+   <program_process/>
+   <program_images/>
+   <program_book/>
+</polar_cut_program>

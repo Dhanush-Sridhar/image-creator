@@ -1,0 +1,89 @@
+<?PM-XML version="1.0" encoding="UTF-8" ?>
+<polar_cut_program version="1.1">
+   <application  name="unknown" >
+      <security_query>01ODIDOEHH</security_query>
+   </application>
+   <program_info>
+      <value  id="1" type="job_name" >Start Up (Duplikat)</value>
+   </program_info>
+   <program_global>
+      <creation_time_stamp>
+         <date>
+            <year>2021</year>
+            <month>7</month>
+            <day>5</day>
+         </date>
+         <time>
+            <hour>11</hour>
+            <minute>59</minute>
+            <second>8</second>
+         </time>
+      </creation_time_stamp>
+      <write_protection>0</write_protection>
+      <alignment_adjustment_1>0</alignment_adjustment_1>
+      <alignment_adjustment_2>0</alignment_adjustment_2>
+      <author>NPRO-</author>
+      <owner>NPRO-</owner>
+      <npro_order>First Sample</npro_order>
+   </program_global>
+   <program_parameters/>
+   <program_steps>
+      <cut_step number="1" type="0" >
+         <measure>585</measure>
+         <spezial_function id="3"/>
+         <spezial_function id="5"/>
+      </cut_step>
+      <cut_step number="2" type="6" >
+         <comment  type="4" ></comment>
+      </cut_step>
+      <cut_step number="3" type="0" >
+         <measure>404</measure>
+         <spezial_function id="3"/>
+         <spezial_function id="5"/>
+      </cut_step>
+      <cut_step number="4" type="0" >
+         <measure>398</measure>
+         <spezial_function id="3"/>
+         <spezial_function id="5"/>
+      </cut_step>
+      <cut_step number="5" type="0" >
+         <measure>249.5</measure>
+         <spezial_function id="5"/>
+      </cut_step>
+      <cut_step number="6" type="0" >
+         <measure>229</measure>
+         <spezial_function id="3"/>
+         <spezial_function id="5"/>
+      </cut_step>
+      <cut_step number="7" type="6" >
+         <comment  type="5" ></comment>
+         <storage_number>1083752024</storage_number>
+      </cut_step>
+      <cut_step number="8" type="0" >
+         <measure>500</measure>
+         <spezial_function id="5"/>
+      </cut_step>
+      <cut_step number="9" type="0" >
+         <measure>484</measure>
+         <spezial_function id="3"/>
+         <spezial_function id="5"/>
+      </cut_step>
+      <cut_step number="10" type="2" >
+         <measure>96.9999</measure>
+         <spezial_function id="4"/>
+      </cut_step>
+      <cut_step number="11" type="3" >
+         <count>4</count>
+      </cut_step>
+      <cut_step number="12" type="4" >
+         <count>4</count>
+      </cut_step>
+      <cut_step number="13" type="0" >
+         <measure>30</measure>
+      </cut_step>
+   </program_steps>
+   <program_graphic/>
+   <program_process/>
+   <program_images/>
+   <program_book/>
+</polar_cut_program>

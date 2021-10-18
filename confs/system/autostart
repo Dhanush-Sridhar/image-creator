@@ -4,6 +4,7 @@ xrandr --output HDMI-1 --auto --primary
 
 # keyboard settings
 setxkbmap -option "grp:lctrl_lshift_toggle" -layout "de" &
+loadkeys de
 
 # disable screen blanking / engery saver mode
 xset s off

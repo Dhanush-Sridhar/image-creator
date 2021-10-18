@@ -1,0 +1,211 @@
+<?PM-XML version="1.0" encoding="UTF-8" ?>
+<polar_cut_program version="1.1">
+   <application  name="unknown" >
+      <security_query>01DDIEOHOH</security_query>
+   </application>
+   <program_info>
+      <value  id="1" type="job_name" >42 straight trim 63x88 2x image 42 straight trim 63x88 2x image</value>
+   </program_info>
+   <program_global>
+      <creation_time_stamp>
+         <date>
+            <year>2021</year>
+            <month>7</month>
+            <day>5</day>
+         </date>
+         <time>
+            <hour>8</hour>
+            <minute>34</minute>
+            <second>16</second>
+         </time>
+      </creation_time_stamp>
+      <write_protection>0</write_protection>
+      <alignment_adjustment_1>0</alignment_adjustment_1>
+      <alignment_adjustment_2>0</alignment_adjustment_2>
+   </program_global>
+   <program_parameters/>
+   <program_steps>
+      <cut_step number="1" type="6" >
+         <comment  type="0" >PACE-RUNDUM</comment>
+      </cut_step>
+      <cut_step number="2" type="6" >
+         <comment  type="0" >MATERIAL LINKS</comment>
+      </cut_step>
+      <cut_step number="3" type="6" >
+         <comment  type="0" >BELADEN</comment>
+      </cut_step>
+      <cut_step number="4" type="0" >
+         <measure>1450</measure>
+         <spezial_function id="14"/>
+         <spezial_function id="22"/>
+         <spezial_function id="24"/>
+         <spezial_function id="2"/>
+         <spezial_function id="8"/>
+         <spezial_function id="19"/>
+      </cut_step>
+      <cut_step number="5" type="1" >
+         <measure>1225</measure>
+         <spezial_function id="14"/>
+      </cut_step>
+      <cut_step number="6" type="0" >
+         <measure>650</measure>
+         <spezial_function id="15"/>
+         <spezial_function id="14"/>
+         <spezial_function id="2"/>
+         <spezial_function id="8"/>
+      </cut_step>
+      <cut_step number="7" type="0" >
+         <measure>620</measure>
+         <spezial_function id="11">0</spezial_function>
+         <spezial_function id="14"/>
+         <spezial_function id="3"/>
+         <spezial_function id="2"/>
+         <spezial_function id="4"/>
+         <spezial_function id="9"/>
+      </cut_step>
+      <cut_step number="8" type="0" >
+         <measure>1450</measure>
+         <spezial_function id="14"/>
+         <spezial_function id="2"/>
+         <spezial_function id="8"/>
+         <spezial_function id="17"/>
+         <spezial_function id="20"/>
+      </cut_step>
+      <cut_step number="9" type="6" >
+         <comment  type="4" ></comment>
+      </cut_step>
+      <cut_step number="10" type="1" >
+         <measure>1120</measure>
+         <spezial_function id="14"/>
+      </cut_step>
+      <cut_step number="11" type="0" >
+         <measure>903</measure>
+         <spezial_function id="15"/>
+         <spezial_function id="14"/>
+         <spezial_function id="2"/>
+         <spezial_function id="8"/>
+      </cut_step>
+      <cut_step number="12" type="0" >
+         <measure>873</measure>
+         <spezial_function id="11">0</spezial_function>
+         <spezial_function id="14"/>
+         <spezial_function id="3"/>
+         <spezial_function id="2"/>
+         <spezial_function id="4"/>
+         <spezial_function id="10"/>
+      </cut_step>
+      <cut_step number="13" type="0" >
+         <measure>1450</measure>
+         <spezial_function id="14"/>
+         <spezial_function id="2"/>
+         <spezial_function id="8"/>
+         <spezial_function id="17"/>
+         <spezial_function id="20"/>
+      </cut_step>
+      <cut_step number="14" type="6" >
+         <comment  type="4" ></comment>
+      </cut_step>
+      <cut_step number="15" type="1" >
+         <measure>1120</measure>
+         <spezial_function id="14"/>
+      </cut_step>
+      <cut_step number="16" type="0" >
+         <measure>640</measure>
+         <spezial_function id="15"/>
+         <spezial_function id="14"/>
+         <spezial_function id="2"/>
+         <spezial_function id="8"/>
+      </cut_step>
+      <cut_step number="17" type="0" >
+         <measure>610</measure>
+         <spezial_function id="11">0</spezial_function>
+         <spezial_function id="14"/>
+         <spezial_function id="3"/>
+         <spezial_function id="2"/>
+         <spezial_function id="4"/>
+      </cut_step>
+      <cut_step number="18" type="0" >
+         <measure>1450</measure>
+         <spezial_function id="14"/>
+         <spezial_function id="2"/>
+         <spezial_function id="8"/>
+         <spezial_function id="17"/>
+         <spezial_function id="20"/>
+      </cut_step>
+      <cut_step number="19" type="6" >
+         <comment  type="4" ></comment>
+      </cut_step>
+      <cut_step number="20" type="1" >
+         <measure>1120</measure>
+         <spezial_function id="14"/>
+      </cut_step>
+      <cut_step number="21" type="0" >
+         <measure>896</measure>
+         <spezial_function id="15"/>
+         <spezial_function id="14"/>
+         <spezial_function id="2"/>
+         <spezial_function id="8"/>
+      </cut_step>
+      <cut_step number="22" type="0" >
+         <measure>866</measure>
+         <spezial_function id="11">0</spezial_function>
+         <spezial_function id="14"/>
+         <spezial_function id="3"/>
+         <spezial_function id="2"/>
+         <spezial_function id="4"/>
+      </cut_step>
+      <cut_step number="23" type="0" >
+         <measure>498</measure>
+         <spezial_function id="21"/>
+         <spezial_function id="8"/>
+      </cut_step>
+      <cut_step number="24" type="0" >
+         <measure>470</measure>
+         <spezial_function id="15"/>
+         <spezial_function id="14"/>
+         <spezial_function id="2"/>
+         <spezial_function id="8"/>
+      </cut_step>
+      <cut_step number="25" type="0" >
+         <measure>440</measure>
+         <spezial_function id="11">0</spezial_function>
+         <spezial_function id="14"/>
+         <spezial_function id="2"/>
+         <spezial_function id="4"/>
+      </cut_step>
+      <cut_step number="26" type="0" >
+         <measure>426</measure>
+         <spezial_function id="11">0</spezial_function>
+         <spezial_function id="14"/>
+         <spezial_function id="3"/>
+         <spezial_function id="2"/>
+         <spezial_function id="4"/>
+      </cut_step>
+      <cut_step number="27" type="6" >
+         <comment  type="9" ></comment>
+      </cut_step>
+      <cut_step number="28" type="1" >
+         <measure>26</measure>
+      </cut_step>
+      <cut_step number="29" type="6" >
+         <comment  type="4" ></comment>
+      </cut_step>
+      <cut_step number="30" type="0" >
+         <measure>309</measure>
+         <spezial_function id="11">0</spezial_function>
+      </cut_step>
+      <cut_step number="31" type="0" >
+         <measure>301</measure>
+         <spezial_function id="11">0</spezial_function>
+         <spezial_function id="3"/>
+         <spezial_function id="21"/>
+      </cut_step>
+      <cut_step number="32" type="1" >
+         <measure>150.5</measure>
+      </cut_step>
+   </program_steps>
+   <program_graphic/>
+   <program_process/>
+   <program_images/>
+   <program_book/>
+</polar_cut_program>

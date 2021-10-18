@@ -1,0 +1,131 @@
+<?PM-XML version="1.0" encoding="UTF-8" ?>
+<polar_cut_program version="1.1">
+   <application  name="unknown" >
+      <security_query>01POIDOGHD</security_query>
+   </application>
+   <program_info>
+      <value  id="1" type="job_name" >Test eins</value>
+   </program_info>
+   <program_global>
+      <creation_time_stamp>
+         <date>
+            <year>2021</year>
+            <month>8</month>
+            <day>4</day>
+         </date>
+         <time>
+            <hour>8</hour>
+            <minute>33</minute>
+            <second>50</second>
+         </time>
+      </creation_time_stamp>
+      <write_protection>0</write_protection>
+      <alignment_adjustment_1>0</alignment_adjustment_1>
+      <alignment_adjustment_2>0</alignment_adjustment_2>
+      <author>NPRO-</author>
+      <owner>NPRO-</owner>
+   </program_global>
+   <program_parameters/>
+   <program_steps>
+      <cut_step number="1" type="0" >
+         <measure>650</measure>
+         <spezial_function id="13"/>
+         <spezial_function id="31"/>
+         <spezial_function id="9"/>
+         <spezial_function id="27"/>
+         <parameter id="0">2</parameter>
+         <parameter id="1">4</parameter>
+         <parameter id="2">8</parameter>
+         <parameter id="3">1</parameter>
+         <parameter id="4">4</parameter>
+         <parameter id="5">4</parameter>
+         <parameter id="6">6</parameter>
+         <parameter id="7">0</parameter>
+         <parameter id="8">2</parameter>
+         <parameter id="9">0</parameter>
+         <parameter id="10">0</parameter>
+         <parameter id="11">0</parameter>
+         <parameter id="12">1</parameter>
+         <parameter id="13">2</parameter>
+         <parameter id="14">8</parameter>
+         <parameter id="15">9</parameter>
+         <parameter id="16">5</parameter>
+         <parameter id="17">0</parameter>
+         <parameter id="18">2</parameter>
+         <parameter id="19">7</parameter>
+         <parameter id="20">9</parameter>
+         <parameter id="21">5</parameter>
+         <spezial_function id="30"/>
+      </cut_step>
+      <cut_step number="2" type="0" >
+         <measure>720</measure>
+      </cut_step>
+      <cut_step number="3" type="5" >
+         <count>1</count>
+      </cut_step>
+      <cut_step number="4" type="6" >
+         <comment  type="0" >s1</comment>
+         <storage_number>80</storage_number>
+      </cut_step>
+      <cut_step number="5" type="0" >
+         <measure>650</measure>
+         <spezial_function id="14"/>
+         <spezial_function id="9"/>
+      </cut_step>
+      <cut_step number="6" type="0" >
+         <measure>200</measure>
+      </cut_step>
+      <cut_step number="7" type="2" >
+         <measure>50</measure>
+      </cut_step>
+      <cut_step number="8" type="3" >
+         <count>2</count>
+      </cut_step>
+      <cut_step number="9" type="4" >
+         <count>2</count>
+      </cut_step>
+      <cut_step number="10" type="0" >
+         <measure>1460</measure>
+         <spezial_function id="22"/>
+         <spezial_function id="8"/>
+         <spezial_function id="2"/>
+         <spezial_function id="24"/>
+         <spezial_function id="19"/>
+      </cut_step>
+      <cut_step number="11" type="5" >
+         <count>2</count>
+      </cut_step>
+      <cut_step number="12" type="0" >
+         <measure>710</measure>
+         <spezial_function id="15"/>
+         <spezial_function id="8"/>
+         <spezial_function id="2"/>
+         <spezial_function id="14"/>
+      </cut_step>
+      <cut_step number="13" type="0" >
+         <measure>520</measure>
+      </cut_step>
+      <cut_step number="14" type="5" >
+         <count>1</count>
+      </cut_step>
+      <cut_step number="15" type="6" >
+         <comment  type="0" >tfzklukj</comment>
+      </cut_step>
+      <cut_step number="16" type="0" >
+         <measure>500</measure>
+      </cut_step>
+      <cut_step number="17" type="0" >
+         <measure>400</measure>
+      </cut_step>
+      <cut_step number="18" type="0" >
+         <measure>200</measure>
+      </cut_step>
+      <cut_step number="19" type="5" >
+         <count>2</count>
+      </cut_step>
+   </program_steps>
+   <program_graphic/>
+   <program_process/>
+   <program_images/>
+   <program_book/>
+</polar_cut_program>

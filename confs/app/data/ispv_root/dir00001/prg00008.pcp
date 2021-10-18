@@ -1,0 +1,34 @@
+<?PM-XML version="1.0" encoding="UTF-8" ?>
+<polar_cut_program version="1.1">
+   <application  name="unknown" >
+      <security_query>01HOOGPDID</security_query>
+   </application>
+   <program_info>
+      <value  id="1" type="job_name" >Test ohne</value>
+   </program_info>
+   <program_global>
+      <creation_time_stamp>
+         <date>
+            <year>2021</year>
+            <month>8</month>
+            <day>4</day>
+         </date>
+         <time>
+            <hour>8</hour>
+            <minute>35</minute>
+            <second>42</second>
+         </time>
+      </creation_time_stamp>
+      <write_protection>1</write_protection>
+      <alignment_adjustment_1>0</alignment_adjustment_1>
+      <alignment_adjustment_2>0</alignment_adjustment_2>
+      <author>NPRO-</author>
+      <owner>NPRO-</owner>
+   </program_global>
+   <program_parameters/>
+   <program_steps/>
+   <program_graphic/>
+   <program_process/>
+   <program_images/>
+   <program_book/>
+</polar_cut_program>

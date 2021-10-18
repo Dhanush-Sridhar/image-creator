@@ -1,22 +1,22 @@
 <?PM-XML version="1.0" encoding="UTF-8" ?>
 <polar_cut_program version="1.1">
    <application  name="unknown" >
-      <security_query>01FDHIOPOD</security_query>
+      <security_query>01HGIDOOPD</security_query>
    </application>
    <program_info>
-      <value  id="1" type="job_name" >Nur_Zusatzfunktionen</value>
+      <value  id="1" type="job_name" >TestNeuesProgramm</value>
    </program_info>
    <program_global>
       <creation_time_stamp>
          <date>
             <year>2021</year>
             <month>8</month>
-            <day>31</day>
+            <day>4</day>
          </date>
          <time>
-            <hour>7</hour>
-            <minute>29</minute>
-            <second>31</second>
+            <hour>8</hour>
+            <minute>33</minute>
+            <second>15</second>
          </time>
       </creation_time_stamp>
       <write_protection>0</write_protection>
@@ -49,7 +49,28 @@
       <parameter id="20">9</parameter>
       <parameter id="21">5</parameter>
    </program_parameters>
-   <program_steps/>
+   <program_steps>
+      <cut_step number="1" type="0" >
+         <measure>800</measure>
+         <spezial_function id="1"/>
+         <spezial_function id="4"/>
+      </cut_step>
+      <cut_step number="2" type="0" >
+         <measure>750</measure>
+         <spezial_function id="1"/>
+         <spezial_function id="4"/>
+      </cut_step>
+      <cut_step number="3" type="0" >
+         <measure>700</measure>
+         <spezial_function id="1"/>
+         <spezial_function id="4"/>
+      </cut_step>
+      <cut_step number="4" type="0" >
+         <measure>650</measure>
+         <spezial_function id="1"/>
+         <spezial_function id="4"/>
+      </cut_step>
+   </program_steps>
    <program_graphic/>
    <program_process/>
    <program_images/>

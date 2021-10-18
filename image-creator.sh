@@ -33,9 +33,12 @@ PERMISSIONS_CONF="${ROOTFS_CONF_PATH}/permissions.conf"
 # default image configs
 IMAGE_USER="polar"
 IMAGE_PASSWORD="evis32"
-IMAGE_HOSTNAME="pcm-cutter-ngs"
+IMAGE_HOSTNAME="Polar-${MACHINE_TYPE_PLACEHOLDER}-${MACHINE_ID_PLACEHOLDER}"
+MACHINE_ID_PLACEHOLDER="123456789"
+MACHINE_TYPE_PLACEHOLDER="PACE"
 #QT_VERSION="5.15.0"
 VNC_PASSWORD="${IMAGE_PASSWORD}"
+
 
 # default options
 CLEAN="NO"
@@ -50,7 +53,7 @@ IMAGE_TYPE="production"
 BASE_IMAGE_PACKAGES="sudo apt-utils"
 RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox xterm network-manager x11-xserver-utils libmbedtls12 apt-offline psmisc dosfstools lsscsi x11vnc vsftpd libxcb-* libxkbcommon-x11-0 net-tools lsof htop nano ntp usbutils unzip lshw"
 DEV_IMAGE_PACKAGES="git xvfb flex bison libxcursor-dev libxcomposite-dev build-essential libssl-dev libxcb1-dev libgl1-mesa-dev libmbedtls-dev unzip"
-DEB_DEV_PACKAGES="dpkg-dev dh-make devscripts git-buildpackage quilt"
+DEB_DEV_PACKAGES="dpkg-dev dh-make devscripts git-buildpackage quilt make dkms"
 INSTALLATION_IMAGE_PACKAGES="gdisk"
 BLUETOOTH_PACKAGES="bluez"
 #QT_IMAGE_PACKAGES="qt${QT_SHORT_VERSION}declarative qt${QT_SHORT_VERSION}quickcontrols2 qt${QT_SHORT_VERSION}graphicaleffects qt${QT_SHORT_VERSION}svg qt${QT_SHORT_VERSION}serialport"
@@ -539,7 +542,7 @@ then
         chroot "${ROOTFS_PATH}" ls -al "/tmp/"
 # Hint: this is formated because of EOF to pipe the install.sh script to chroot
 # ---
-        cat << EOF | chroot "${ROOTFS_PATH}" 
+        cat <<-EOF | chroot "${ROOTFS_PATH}" 
         cd /tmp/SiteManager_Installer/
         ./install.sh
 EOF
@@ -552,46 +555,25 @@ EOF
     #################### RTL8188EU driver for Bluetooth/WiFi USB-Adapter ##########################
     if [ ${INSTALL_WIFI} = "YES" ]
     then
-        ## Install RTL8188eu driver
-        #for TAR_FILE in $(ls -1 ${PKG_TARBALLS_PATH}/*.tar*)
-        #do
-        #    console_log "## Install $(basename ${TAR_FILE}) to rootfs ##"
-        #    tar -xf ${TAR_FILE} -C ${ROOTFS_PATH}
-        #done
 
         console_log "## Install RTL8188EU Bluetooth/WiFi driver to rootfs ##"
     
-# Hint: this is formated because of EOF to pipe the install.sh script to chroot
+# Hint: formated because of EOF to chroot pipe
 # ---
-        cat << EOF | chroot "${ROOTFS_PATH}"
+        cat <<-EOF | chroot "${ROOTFS_PATH}"
         git clone https://github.com/lwfinger/rtl8188eu.git 
         cd rtl8188eu-master
         make all
         sudo make install
         cp rtl8188eufw.bin /lib/firmware/rtlwifi/rtl8188eufw.bin
-        
         touch /etc/NetworkManager/conf.d/80-wifi.conf
         echo "[device]" > /etc/NetworkManager/conf.d/80-wifi.conf
         echo "wifi.scan-rand-mac-address=no" >> /etc/NetworkManager/conf.d/80-wifi.conf
+
+        nmcli radio wifi on
+        sudo nmcli dev wifi connect Polarsmart password "1906198815925835"
 EOF
 # ---
-
-        #chroot "${ROOTFS_PATH}"
-        #chroot ${ROOTFS_PATH} git clone https://github.com/lwfinger/rtl8188eu.git && cd rtl8188eu-master
-        #chroot ${ROOTFS_PATH} cd rtl8188eu-master
-
-        #make all
-        #sudo make install
-
-        # copy firmware      
-        
-
-        # Avoid 'NetworkManager does not list SSID' issue
-        #touch /etc/NetworkManager/conf.d/80-wifi.conf
-        #echo "[device]" > 80-wifi.conf
-        #echo "wifi.scan-rand-mac-address=no" >> 80-wifi.conf
-        #systemctl restart NetworkManager
-
         console_log "RTL8188EU driver installation complete."
     fi
 fi
@@ -727,7 +709,7 @@ then
 
     if [ "${IMAGE_TARGET_TYPE}" = "installer" -o "${IMAGE_TYPE}" = "installation" ]
     then
-        INSTALLER_BINARY="${WORK_PATH}/${IMAGE_TYPE}-image-installer_$(date '+%Y%m%d%H%M%S').bin"
+        INSTALLER_BINARY="${WORK_PATH}/${IMAGE_TYPE}-image-installer_$(date '+%Y-%m-%d_%H-%M-%S').bin"
         cat "${INSTALLER_SCRIPT}" "${ROOTFS_TARBALL}" > "${INSTALLER_BINARY}"
         chmod +x "${INSTALLER_BINARY}"
         chgrp $SUDO_GID "${INSTALLER_BINARY}"

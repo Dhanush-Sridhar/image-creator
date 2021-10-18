@@ -1,22 +1,22 @@
 <?PM-XML version="1.0" encoding="UTF-8" ?>
 <polar_cut_program version="1.1">
    <application  name="unknown" >
-      <security_query>01FDHIOPOD</security_query>
+      <security_query>01IOHDOODC</security_query>
    </application>
    <program_info>
-      <value  id="1" type="job_name" >Nur_Zusatzfunktionen</value>
+      <value  id="1" type="job_name" >Hallo</value>
    </program_info>
    <program_global>
       <creation_time_stamp>
          <date>
             <year>2021</year>
-            <month>8</month>
-            <day>31</day>
+            <month>9</month>
+            <day>28</day>
          </date>
          <time>
-            <hour>7</hour>
-            <minute>29</minute>
-            <second>31</second>
+            <hour>11</hour>
+            <minute>48</minute>
+            <second>29</second>
          </time>
       </creation_time_stamp>
       <write_protection>0</write_protection>
@@ -26,15 +26,15 @@
       <owner>NPRO-</owner>
    </program_global>
    <program_parameters>
-      <parameter id="0">1</parameter>
-      <parameter id="1">1</parameter>
+      <parameter id="0">2</parameter>
+      <parameter id="1">4</parameter>
       <parameter id="2">8</parameter>
       <parameter id="3">1</parameter>
       <parameter id="4">4</parameter>
       <parameter id="5">4</parameter>
       <parameter id="6">6</parameter>
       <parameter id="7">0</parameter>
-      <parameter id="8">1</parameter>
+      <parameter id="8">2</parameter>
       <parameter id="9">0</parameter>
       <parameter id="10">0</parameter>
       <parameter id="11">0</parameter>
@@ -49,7 +49,20 @@
       <parameter id="20">9</parameter>
       <parameter id="21">5</parameter>
    </program_parameters>
-   <program_steps/>
+   <program_steps>
+      <cut_step number="1" type="0" >
+         <measure>1000</measure>
+         <spezial_function id="1"/>
+      </cut_step>
+      <cut_step number="2" type="0" >
+         <measure>900</measure>
+         <spezial_function id="1"/>
+      </cut_step>
+      <cut_step number="3" type="0" >
+         <measure>750</measure>
+         <spezial_function id="1"/>
+      </cut_step>
+   </program_steps>
    <program_graphic/>
    <program_process/>
    <program_images/>

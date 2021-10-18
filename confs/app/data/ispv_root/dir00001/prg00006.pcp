@@ -1,0 +1,36 @@
+<?PM-XML version="1.0" encoding="UTF-8" ?>
+<polar_cut_program version="1.1">
+   <application  name="unknown" >
+      <security_query>01OHODIEID</security_query>
+   </application>
+   <program_info>
+      <value  id="1" type="job_name" >Manueller Bogen</value>
+   </program_info>
+   <program_global>
+      <creation_time_stamp>
+         <date>
+            <year>2021</year>
+            <month>7</month>
+            <day>6</day>
+         </date>
+         <time>
+            <hour>10</hour>
+            <minute>10</minute>
+            <second>2</second>
+         </time>
+      </creation_time_stamp>
+      <write_protection>1</write_protection>
+      <alignment_adjustment_1>0</alignment_adjustment_1>
+      <alignment_adjustment_2>0</alignment_adjustment_2>
+   </program_global>
+   <program_parameters/>
+   <program_steps>
+      <cut_step number="1" type="0" >
+         <measure>1000</measure>
+      </cut_step>
+   </program_steps>
+   <program_graphic/>
+   <program_process/>
+   <program_images/>
+   <program_book/>
+</polar_cut_program>
