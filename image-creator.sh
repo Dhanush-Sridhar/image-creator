@@ -50,12 +50,18 @@ IMAGE_TYPE="production"
 
 # package lists
 #QT_SHORT_VERSION="$(echo ${QT_VERSION%.*} | tr -d '.')"
+# build-essential: required to create a Debian package (deb)... libc, gcc, g++, make, dpkg-dev etc.
 BASE_IMAGE_PACKAGES="sudo apt-utils"
-RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox xterm network-manager x11-xserver-utils libmbedtls12 apt-offline psmisc dosfstools lsscsi x11vnc vsftpd libxcb-* libxkbcommon-x11-0 net-tools lsof htop nano ntp usbutils unzip lshw"
-DEV_IMAGE_PACKAGES="git xvfb flex bison libxcursor-dev libxcomposite-dev build-essential libssl-dev libxcb1-dev libgl1-mesa-dev libmbedtls-dev unzip"
-DEB_DEV_PACKAGES="dpkg-dev dh-make devscripts git-buildpackage quilt make dkms"
+RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox xterm network-manager x11-xserver-utils libmbedtls12 apt-offline psmisc dosfstools lsscsi x11vnc vsftpd libxcb-* libxkbcommon-x11-0 htop nano usbutils unzip lshw lsof"
+DEV_IMAGE_PACKAGES="git xvfb flex bison libxcursor-dev libxcomposite-dev build-essential libssl-dev libxcb1-dev libgl1-mesa-dev libmbedtls-dev"
 INSTALLATION_IMAGE_PACKAGES="gdisk"
+
+NETWORK_PACKAGES="net-tools nmap chromium-browser"
 BLUETOOTH_PACKAGES="bluez"
+TIME_PACKAGES="chrony ntp"
+
+DEB_DEV_PACKAGES="dpkg-dev dh-make devscripts git-buildpackage quilt make dkms"
+
 #QT_IMAGE_PACKAGES="qt${QT_SHORT_VERSION}declarative qt${QT_SHORT_VERSION}quickcontrols2 qt${QT_SHORT_VERSION}graphicaleffects qt${QT_SHORT_VERSION}svg qt${QT_SHORT_VERSION}serialport"
 
 # tag::TODO 
@@ -361,13 +367,13 @@ if [ ! -z "${IMAGE_TYPE}" ]
 then
     case ${IMAGE_TYPE} in
         production)
-            IMAGE_PACKAGE_LIST="${RUNTIME_IMAGE_PACKAGES} ${BLUETOOTH_PACKAGES} ${DEB_DEV_PACKAGES}"
+            IMAGE_PACKAGE_LIST="${RUNTIME_IMAGE_PACKAGES} ${BLUETOOTH_PACKAGES} ${TIME_PACKAGES} ${NETWORK_PACKAGES}"
             ;;
         development)
-            IMAGE_PACKAGE_LIST="${DEV_IMAGE_PACKAGES} ${DEB_DEV_PACKAGES} ${BLUETOOTH_PACKAGES} ${WEBVIEW_PACKAGES}"
+            IMAGE_PACKAGE_LIST="${DEV_IMAGE_PACKAGES}"
             ;;
         installation)
-            IMAGE_PACKAGE_LIST="${INSTALLATION_IMAGE_PACKAGES} ${RUNTIME_IMAGE_PACKAGES} ${BLUETOOTH_PACKAGES}"
+            IMAGE_PACKAGE_LIST="${INSTALLATION_IMAGE_PACKAGES} ${RUNTIME_IMAGE_PACKAGES}"
             ;;
         *)
             console_log "Unknown image type ${IMAGE_TYPE}!"
@@ -560,7 +566,7 @@ EOF
     
 # Hint: formated because of EOF to chroot pipe
 # ---
-        cat <<-EOF | chroot "${ROOTFS_PATH}"
+        cat <<EOF | chroot "${ROOTFS_PATH}"
         git clone https://github.com/lwfinger/rtl8188eu.git 
         cd rtl8188eu-master
         make all
