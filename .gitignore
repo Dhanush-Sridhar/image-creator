@@ -4,3 +4,4 @@ rootfs*.img
 rootfs*.tar.*
 *.bin
 *.bak
+*.deb

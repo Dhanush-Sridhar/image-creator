@@ -1,5 +1,4 @@
 #!/bin/bash
-
 [ ! -z "${DEBUG}" ] && set -x
 
 ###################################################################################################
@@ -8,6 +7,10 @@
 
 SCRIPT_PATH="$(dirname $(readlink -f $0))"
 WORK_PATH="$PWD"
+
+# git hash
+#LAST_COMMIT='git log -1 --pretty=format:"%an, %s, %ai"'
+#echo "${LAST_COMMIT}"
 
 # debootstrap defaults
 APT_CMD="apt"
@@ -56,11 +59,13 @@ RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox
 DEV_IMAGE_PACKAGES="git xvfb flex bison libxcursor-dev libxcomposite-dev build-essential libssl-dev libxcb1-dev libgl1-mesa-dev libmbedtls-dev"
 INSTALLATION_IMAGE_PACKAGES="gdisk"
 
-NETWORK_PACKAGES="net-tools nmap chromium-browser"
+BUILD_PACKAGES="dpkg-dev dh-make devscripts git-buildpackage quilt make dkms"
 BLUETOOTH_PACKAGES="bluez"
-TIME_PACKAGES="chrony ntp"
+NETWORK_PACKAGES="net-tools nmap netdiscover"
+TIME_PACKAGES="chrony"
 
-DEB_DEV_PACKAGES="dpkg-dev dh-make devscripts git-buildpackage quilt make dkms"
+#ALL_DEV_PKG="${RUNTIME_IMAGE_PACKAGES} ${BLUETOOTH_PACKAGES} ${BUILD_PACKAGES} ${NETWORK_PACKAGES} ${TIME_PACKAGES}"
+ 
 
 #QT_IMAGE_PACKAGES="qt${QT_SHORT_VERSION}declarative qt${QT_SHORT_VERSION}quickcontrols2 qt${QT_SHORT_VERSION}graphicaleffects qt${QT_SHORT_VERSION}svg qt${QT_SHORT_VERSION}serialport"
 
@@ -89,12 +94,7 @@ echo "#         <benjamin.federau@basyskom.com>  #"
 echo "# ---------------------------------------- #"
 echo "# (c) Adolf Mohr Maschinenfabrik           #"
 echo "############################################"
-echo ""
-echo "Hint:"
-echo "Make sure that the debian package o(pds_cutter application) and the sitemanager tarball are copied into the image-creator repo"
-echo "Dir-Path:" 
-echo "/image-creator/packages/deb/PDS-Cutter_timestemp.deb"
-echo "/image-creator/packages/sitemanager/SiteManager.tar"
+echo""
 }
 
 function usage() {
@@ -356,7 +356,7 @@ then
         *)
             console_log "Unknown image target ${IMAGE_TARGET}!"
             console_log "Available image types: loop | /dev/sdX | tarball | installer | none"
-            console_log ""
+            console_log ""  
             exit 1
             ;;
     esac
@@ -367,7 +367,7 @@ if [ ! -z "${IMAGE_TYPE}" ]
 then
     case ${IMAGE_TYPE} in
         production)
-            IMAGE_PACKAGE_LIST="${RUNTIME_IMAGE_PACKAGES} ${BLUETOOTH_PACKAGES} ${TIME_PACKAGES} ${NETWORK_PACKAGES}"
+            IMAGE_PACKAGE_LIST="${RUNTIME_IMAGE_PACKAGES} ${BLUETOOTH_PACKAGES} ${BUILD_PACKAGES} ${NETWORK_PACKAGES} ${TIME_PACKAGES}"
             ;;
         development)
             IMAGE_PACKAGE_LIST="${DEV_IMAGE_PACKAGES}"
@@ -548,9 +548,9 @@ then
         chroot "${ROOTFS_PATH}" ls -al "/tmp/"
 # Hint: this is formated because of EOF to pipe the install.sh script to chroot
 # ---
-        cat <<-EOF | chroot "${ROOTFS_PATH}" 
-        cd /tmp/SiteManager_Installer/
-        ./install.sh
+cat <<EOF | chroot "${ROOTFS_PATH}" 
+cd /tmp/SiteManager_Installer/
+./install.sh
 EOF
 # ---
         chroot "${ROOTFS_PATH}" rm -r "/tmp/SiteManager_Installer" && chroot "${ROOTFS_PATH}" rm -r "/tmp/INSTALL_SITEMANAGER"
@@ -561,28 +561,26 @@ EOF
     #################### RTL8188EU driver for Bluetooth/WiFi USB-Adapter ##########################
     if [ ${INSTALL_WIFI} = "YES" ]
     then
-
         console_log "## Install RTL8188EU Bluetooth/WiFi driver to rootfs ##"
     
 # Hint: formated because of EOF to chroot pipe
 # ---
-        cat <<EOF | chroot "${ROOTFS_PATH}"
-        git clone https://github.com/lwfinger/rtl8188eu.git 
-        cd rtl8188eu-master
-        make all
-        sudo make install
-        cp rtl8188eufw.bin /lib/firmware/rtlwifi/rtl8188eufw.bin
-        touch /etc/NetworkManager/conf.d/80-wifi.conf
-        echo "[device]" > /etc/NetworkManager/conf.d/80-wifi.conf
-        echo "wifi.scan-rand-mac-address=no" >> /etc/NetworkManager/conf.d/80-wifi.conf
-
-        nmcli radio wifi on
-        sudo nmcli dev wifi connect Polarsmart password "1906198815925835"
+cat <<EOF | chroot "${ROOTFS_PATH}"
+git clone https://github.com/lwfinger/rtl8188eu.git 
+cd rtl8188eu-master
+make all
+sudo make install
+cp rtl8188eufw.bin /lib/firmware/rtlwifi/rtl8188eufw.bin
+touch /etc/NetworkManager/conf.d/80-wifi.conf
+echo "[device]" > /etc/NetworkManager/conf.d/80-wifi.conf
+echo "wifi.scan-rand-mac-address=no" >> /etc/NetworkManager/conf.d/80-wifi.conf
+console_log "RTL8188EU driver installation complete."
 EOF
 # ---
-        console_log "RTL8188EU driver installation complete."
+
     fi
 fi
+
 
 console_log "### User management ###"
 echo -e "${IMAGE_PASSWORD}\n${IMAGE_PASSWORD}\n" | chroot ${ROOTFS_PATH} passwd root
