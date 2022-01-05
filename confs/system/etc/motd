@@ -1,0 +1,76 @@
+                                               .⌂
+                                               ▐▓U
+                                               ▐▓▓Ñ
+                                                ╙▓▓▓╦
+                                               ▐▌░╣▓▓N
+                                               ▐▓▓U╨▓▓▌m
+                                               `╣▓▓N╙╬▓▓N
+                                               j▄╨▓▓▓m╟▓▓▌.
+                                               ╚██░╣▓▓╗╨▓▓▓╦
+                                               ╚███▄╚▓▓▌░╟▓▓N
+                                               ╚████▓╙╬▓▓N╨▓Ü
+                                               ╚██████w╬▓▓▌░╨
+                                               ╚██▌╙███▄╙▓▓▓H
+       ▀██████████████▓▓▄,     ,╔▄▓██████▓▓▄w  ╠██▌  ▀███⌂╣▓H          ╓▓▓     `▀███████████████▓▄,
+        `╙╙╙╙╙╙╙╙╙╙╙╙▀▀███▓. ╔▓████▀▀"╙╙▀▀████▓╠██▌   ╙███▄╙Ñ         ▄████m     ╙╙╙╙╙╙╙╙╙╙╙╙╙╙▀████,
+                       `╙███▓███╨          `╙█████▌    `████        ,▓██████▄                    ╙███
+                         ╟████╨               ▀███▌      ║██▌      ╔███▀ `▀███⌂                   ╫██M
+                         ╔███M                 ╫██▌      ║██▌    ,╣███"    ╙███▄                 ╔███
+                        ╓████                  ╚██▌      ║██▌   ╔███▀       `████       ╓╓╓µ╓╓≥▄████"
+                     ,╓▄█████H                 ╫██▌      ║██▌ ,▄███╨         `╙███φ     ╙████████▀╨
+               ╫█████████▀║███                ╔███`      ║█████████m╣▓▓N╙╣▓▓╗  ╙███▓     `▀███░
+               ╟███▀╨╙'    ╙███▄            ╓▓███"       ╙╨╨▀╨╨╨▀███▄╙▓▓▓░╚▓╫▌.  ▀███m     ╙███▄
+        .,,,,,,╫██▌         `▀████▄g,,,,╓▄▄▓███▀  .,,,,,,,,,,,,,,▐███▓░╣▓▓╗╙╬▓▓N  ╙███▄,,,,,▐███▓
+        ║█████████▌           `╙▀███████████▀"    ╟████████████████████▄╚▓▓▌░╣▓▓▌.  ▀█████████████φ
+        `""""""""╙`                `""╙"``        `╙""""""""""""""""""""``"`` `""`   "╙""""""""""╙"
+
+    ====================================================================================================
+
+        CLI Tools:
+        * htop          - CLI ProcessManager / SystemResources
+        * ranger        - CLI FileViewer
+        * w3m           - CLI WebBrowser
+
+        Network Config & Diagnosis:
+        * nmcli         - CLI NetworkManager    nmcli d wifi connect <ssid> password <pw>
+        * netdiscover   - CLI ARP Scanner       netdiscover -r 192.168.0.0/24
+        * nmap          - CLI PortScanner       nmap -sT 192.168.1.1  / nmap -sV localhost
+        * ethtool       - CLI Network config    sudo ethtool -S enp0s31f6)
+        * tcpdump       - Trace TCP Packages    sudo tcpdump -i any -c3 -nn
+
+        * SiteManager Service
+          /etc/init.d/sitemanager (start|stop|restart|status|reload|force-reload
+
+    ====================================================================================================
+
+        Config Files:
+        * Chrony Timeserver         /etc/chrony/chrony.conf                         - TODO: delete NTP!
+        * Blacklist RTL8188U        /etc/modprobe.d/50-rtl8xxxu.conf
+        * Runable without pw        /etc/sudoers.d/99mount
+        * Network                   /etc/system-connections/LAN#.nmconnection
+        * Register USV              /etc/rules.d/99-usv-cap-serial.rules             - TODO: modify!
+        * Run on startup            /etc/rc.local
+        * This message              /etc/motd
+        * FTP                       /etc/vsftpd.conf & vsftpd.user_list
+
+    ====================================================================================================
+
+        WIFI:
+        * nmcli dev wifi list
+        * nmcli radio wifi on
+        * sudo nmcli dev wifi connect <my_wifi> password <password>
+        * sudo ip link set <wlx801f02af01f3> up
+
+
+
+
+
+
+
+
+
+
+
+
+
+

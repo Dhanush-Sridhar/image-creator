@@ -1,12 +1,10 @@
 <?PM-XML version="1.0" encoding="UTF-8" ?>
 <polar_cut_program version="1.1">
-   <application  name="Compucut V5.0.10a-W32 [Apr  7 2021 14:38:13]" >
-      <security_query>01AMAGJFPD</security_query>
+   <application  name="unknown" >
+      <security_query>01ODODIHEA</security_query>
    </application>
    <program_info>
       <value  id="1" type="job_name" >46 straight tim 71x98 46 straight tim 71x98</value>
-      <value  id="2" type="date" >21.10.21 / 13:30</value>
-      <value  id="3" type="format" > 98.000/ 71.000</value>
    </program_info>
    <program_global>
       <creation_time_stamp>
@@ -24,22 +22,64 @@
       <write_protection>0</write_protection>
       <alignment_adjustment_1>0</alignment_adjustment_1>
       <alignment_adjustment_2>0</alignment_adjustment_2>
-      <machine_type>1</machine_type>
       <author>COMPUCUT</author>
       <owner>115 NPRO</owner>
-      <fingerprint>
-         <compucut>1</compucut>
-      </fingerprint>
    </program_global>
-   <program_parameters/>
+   <program_parameters>
+      <parameter id="0">2</parameter>
+      <parameter id="1">4</parameter>
+      <parameter id="2">8</parameter>
+      <parameter id="3">1</parameter>
+      <parameter id="4">4</parameter>
+      <parameter id="5">4</parameter>
+      <parameter id="6">6</parameter>
+      <parameter id="7">0</parameter>
+      <parameter id="8">2</parameter>
+      <parameter id="9">0</parameter>
+      <parameter id="10">0</parameter>
+      <parameter id="11">0</parameter>
+      <parameter id="12">1</parameter>
+      <parameter id="13">2</parameter>
+      <parameter id="14">8</parameter>
+      <parameter id="15">9</parameter>
+      <parameter id="16">5</parameter>
+      <parameter id="17">0</parameter>
+      <parameter id="18">2</parameter>
+      <parameter id="19">7</parameter>
+      <parameter id="20">9</parameter>
+      <parameter id="21">5</parameter>
+   </program_parameters>
    <program_steps>
       <cut_step number="1" type="6" >
          <comment  type="0" >INITIAL CUT CROSS1</comment>
       </cut_step>
       <cut_step number="2" type="0" >
          <measure>684</measure>
-         <spezial_function id="3"/>
          <spezial_function id="9"/>
+         <spezial_function id="3"/>
+         <spezial_function id="27"/>
+         <parameter id="0">2</parameter>
+         <parameter id="1">4</parameter>
+         <parameter id="2">8</parameter>
+         <parameter id="3">1</parameter>
+         <parameter id="4">4</parameter>
+         <parameter id="5">4</parameter>
+         <parameter id="6">6</parameter>
+         <parameter id="7">0</parameter>
+         <parameter id="8">2</parameter>
+         <parameter id="9">0</parameter>
+         <parameter id="10">0</parameter>
+         <parameter id="11">0</parameter>
+         <parameter id="12">1</parameter>
+         <parameter id="13">2</parameter>
+         <parameter id="14">8</parameter>
+         <parameter id="15">9</parameter>
+         <parameter id="16">5</parameter>
+         <parameter id="17">0</parameter>
+         <parameter id="18">2</parameter>
+         <parameter id="19">7</parameter>
+         <parameter id="20">9</parameter>
+         <parameter id="21">5</parameter>
       </cut_step>
       <cut_step number="3" type="6" >
          <comment  type="4" >RIGHT 90 DG TURN</comment>
@@ -47,8 +87,8 @@
       <cut_step number="4" type="0" >
          <measure>936.5</measure>
          <spezial_function id="3"/>
-         <spezial_function id="6"/>
          <spezial_function id="10"/>
+         <spezial_function id="6"/>
       </cut_step>
       <cut_step number="5" type="6" >
          <comment  type="3" >TURN 180 DEG</comment>
@@ -76,7 +116,6 @@
       </cut_step>
       <cut_step number="12" type="6" >
          <comment  type="5" >LEFT 90 DG TURN</comment>
-         <graphic_info>3</graphic_info>
       </cut_step>
       <cut_step number="13" type="0" >
          <measure>654</measure>
@@ -103,210 +142,7 @@
          <count>1</count>
       </cut_step>
    </program_steps>
-   <program_graphic>
-      <sheet>
-         <length_x>980</length_x>
-         <length_y>710</length_y>
-         <length_Z>0</length_Z>
-         <sheet_batch>0</sheet_batch>
-         <sheet_lay>1</sheet_lay>
-      </sheet>
-      <label>
-         <pos_x>40.5</pos_x>
-         <pos_y>30</pos_y>
-         <length_x>296</length_x>
-         <length_y>90</length_y>
-         <label_id>1</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>40.5</pos_x>
-         <pos_y>124</pos_y>
-         <length_x>296</length_x>
-         <length_y>90</length_y>
-         <label_id>1</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>40.5</pos_x>
-         <pos_y>218</pos_y>
-         <length_x>296</length_x>
-         <length_y>90</length_y>
-         <label_id>1</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>40.5</pos_x>
-         <pos_y>312</pos_y>
-         <length_x>296</length_x>
-         <length_y>90</length_y>
-         <label_id>1</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>40.5</pos_x>
-         <pos_y>406</pos_y>
-         <length_x>296</length_x>
-         <length_y>90</length_y>
-         <label_id>1</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>40.5</pos_x>
-         <pos_y>500</pos_y>
-         <length_x>296</length_x>
-         <length_y>90</length_y>
-         <label_id>1</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>40.5</pos_x>
-         <pos_y>594</pos_y>
-         <length_x>296</length_x>
-         <length_y>90</length_y>
-         <label_id>1</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>340.5</pos_x>
-         <pos_y>30</pos_y>
-         <length_x>296</length_x>
-         <length_y>90</length_y>
-         <label_id>1</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>340.5</pos_x>
-         <pos_y>124</pos_y>
-         <length_x>296</length_x>
-         <length_y>90</length_y>
-         <label_id>1</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>340.5</pos_x>
-         <pos_y>218</pos_y>
-         <length_x>296</length_x>
-         <length_y>90</length_y>
-         <label_id>1</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>340.5</pos_x>
-         <pos_y>312</pos_y>
-         <length_x>296</length_x>
-         <length_y>90</length_y>
-         <label_id>1</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>340.5</pos_x>
-         <pos_y>406</pos_y>
-         <length_x>296</length_x>
-         <length_y>90</length_y>
-         <label_id>1</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>340.5</pos_x>
-         <pos_y>500</pos_y>
-         <length_x>296</length_x>
-         <length_y>90</length_y>
-         <label_id>1</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>340.5</pos_x>
-         <pos_y>594</pos_y>
-         <length_x>296</length_x>
-         <length_y>90</length_y>
-         <label_id>1</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>640.5</pos_x>
-         <pos_y>30</pos_y>
-         <length_x>296</length_x>
-         <length_y>90</length_y>
-         <label_id>1</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>640.5</pos_x>
-         <pos_y>124</pos_y>
-         <length_x>296</length_x>
-         <length_y>90</length_y>
-         <label_id>1</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>640.5</pos_x>
-         <pos_y>218</pos_y>
-         <length_x>296</length_x>
-         <length_y>90</length_y>
-         <label_id>1</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>640.5</pos_x>
-         <pos_y>312</pos_y>
-         <length_x>296</length_x>
-         <length_y>90</length_y>
-         <label_id>1</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>640.5</pos_x>
-         <pos_y>406</pos_y>
-         <length_x>296</length_x>
-         <length_y>90</length_y>
-         <label_id>1</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>640.5</pos_x>
-         <pos_y>500</pos_y>
-         <length_x>296</length_x>
-         <length_y>90</length_y>
-         <label_id>1</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>640.5</pos_x>
-         <pos_y>594</pos_y>
-         <length_x>296</length_x>
-         <length_y>90</length_y>
-         <label_id>1</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <block>
-         <pos_x>40.5</pos_x>
-         <pos_y>30</pos_y>
-         <length_x>896</length_x>
-         <length_y>654</length_y>
-      </block>
-   </program_graphic>
+   <program_graphic/>
    <program_process/>
    <program_images/>
    <program_book/>

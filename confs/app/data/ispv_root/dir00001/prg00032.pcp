@@ -1,12 +1,10 @@
 <?PM-XML version="1.0" encoding="UTF-8" ?>
 <polar_cut_program version="1.1">
-   <application  name="Compucut V5.0.10a-W32 [Apr  7 2021 14:38:13]" >
-      <security_query>01AMGJDPFA</security_query>
+   <application  name="unknown" >
+      <security_query>01ODDIAEHO</security_query>
    </application>
    <program_info>
       <value  id="1" type="job_name" >76 combo 72x102 76 combo 72x102</value>
-      <value  id="2" type="date" >21.10.21 / 13:28</value>
-      <value  id="3" type="format" >102.000/ 72.000</value>
    </program_info>
    <program_global>
       <creation_time_stamp>
@@ -24,36 +22,55 @@
       <write_protection>0</write_protection>
       <alignment_adjustment_1>0</alignment_adjustment_1>
       <alignment_adjustment_2>0</alignment_adjustment_2>
-      <machine_type>1</machine_type>
       <author>COMPUCUT</author>
       <owner>115 NPRO</owner>
-      <fingerprint>
-         <compucut>1</compucut>
-      </fingerprint>
    </program_global>
-   <program_parameters/>
+   <program_parameters>
+      <parameter id="0">2</parameter>
+      <parameter id="1">4</parameter>
+      <parameter id="2">8</parameter>
+      <parameter id="3">1</parameter>
+      <parameter id="4">4</parameter>
+      <parameter id="5">4</parameter>
+      <parameter id="6">6</parameter>
+      <parameter id="7">0</parameter>
+      <parameter id="8">2</parameter>
+      <parameter id="9">0</parameter>
+      <parameter id="10">0</parameter>
+      <parameter id="11">0</parameter>
+      <parameter id="12">1</parameter>
+      <parameter id="13">2</parameter>
+      <parameter id="14">8</parameter>
+      <parameter id="15">9</parameter>
+      <parameter id="16">5</parameter>
+      <parameter id="17">0</parameter>
+      <parameter id="18">2</parameter>
+      <parameter id="19">7</parameter>
+      <parameter id="20">9</parameter>
+      <parameter id="21">5</parameter>
+   </program_parameters>
    <program_steps>
       <cut_step number="1" type="6" >
          <comment  type="0" >AUTOMATIC CROSS</comment>
       </cut_step>
       <cut_step number="2" type="0" >
          <measure>694</measure>
-         <spezial_function id="3"/>
          <spezial_function id="9"/>
+         <spezial_function id="3"/>
       </cut_step>
       <cut_step number="3" type="6" >
          <comment  type="4" >RIGHT 90 DG TURN</comment>
       </cut_step>
       <cut_step number="4" type="0" >
          <measure>1017</measure>
+         <spezial_function id="10"/>
          <spezial_function id="3"/>
          <spezial_function id="6"/>
-         <spezial_function id="10"/>
       </cut_step>
       <cut_step number="5" type="0" >
          <measure>903</measure>
-         <spezial_function id="10"/>
          <spezial_function id="7"/>
+         <spezial_function id="10"/>
       </cut_step>
       <cut_step number="6" type="6" >
          <comment  type="0" >Blk05</comment>
@@ -67,13 +84,13 @@
       </cut_step>
       <cut_step number="9" type="0" >
          <measure>900</measure>
-         <spezial_function id="3"/>
          <spezial_function id="10"/>
+         <spezial_function id="3"/>
       </cut_step>
       <cut_step number="10" type="0" >
          <measure>803</measure>
-         <spezial_function id="10"/>
          <spezial_function id="7"/>
+         <spezial_function id="10"/>
       </cut_step>
       <cut_step number="11" type="6" >
          <comment  type="0" >Blk25</comment>
@@ -87,8 +104,8 @@
       </cut_step>
       <cut_step number="14" type="0" >
          <measure>800</measure>
-         <spezial_function id="3"/>
          <spezial_function id="10"/>
+         <spezial_function id="3"/>
       </cut_step>
       <cut_step number="15" type="0" >
          <measure>703</measure>
@@ -123,13 +140,13 @@
       </cut_step>
       <cut_step number="24" type="0" >
          <measure>498</measure>
-         <spezial_function id="3"/>
          <spezial_function id="10"/>
+         <spezial_function id="3"/>
       </cut_step>
       <cut_step number="25" type="0" >
          <measure>384</measure>
-         <spezial_function id="10"/>
          <spezial_function id="7"/>
+         <spezial_function id="10"/>
       </cut_step>
       <cut_step number="26" type="6" >
          <comment  type="0" >Blk06</comment>
@@ -143,13 +160,13 @@
       </cut_step>
       <cut_step number="29" type="0" >
          <measure>381</measure>
-         <spezial_function id="3"/>
          <spezial_function id="10"/>
+         <spezial_function id="3"/>
       </cut_step>
       <cut_step number="30" type="0" >
          <measure>284</measure>
-         <spezial_function id="10"/>
          <spezial_function id="7"/>
+         <spezial_function id="10"/>
       </cut_step>
       <cut_step number="31" type="6" >
          <comment  type="0" >Blk27</comment>
@@ -163,13 +180,13 @@
       </cut_step>
       <cut_step number="34" type="0" >
          <measure>281</measure>
-         <spezial_function id="3"/>
          <spezial_function id="10"/>
+         <spezial_function id="3"/>
       </cut_step>
       <cut_step number="35" type="0" >
          <measure>221</measure>
-         <spezial_function id="10"/>
          <spezial_function id="7"/>
+         <spezial_function id="10"/>
       </cut_step>
       <cut_step number="36" type="6" >
          <comment  type="0" >Blk33</comment>
@@ -183,8 +200,8 @@
       </cut_step>
       <cut_step number="39" type="0" >
          <measure>217</measure>
-         <spezial_function id="3"/>
          <spezial_function id="10"/>
+         <spezial_function id="3"/>
       </cut_step>
       <cut_step number="40" type="6" >
          <comment  type="4" >RIGHT 90 DG TURN</comment>
@@ -552,9 +569,9 @@
       </cut_step>
       <cut_step number="143" type="0" >
          <measure>690</measure>
+         <spezial_function id="9"/>
          <spezial_function id="3"/>
          <spezial_function id="6"/>
-         <spezial_function id="9"/>
       </cut_step>
       <cut_step number="144" type="2" >
          <measure>70</measure>
@@ -580,8 +597,8 @@
       </cut_step>
       <cut_step number="151" type="0" >
          <measure>262</measure>
-         <spezial_function id="3"/>
          <spezial_function id="9"/>
+         <spezial_function id="3"/>
       </cut_step>
       <cut_step number="152" type="0" >
          <measure>192</measure>
@@ -618,9 +635,9 @@
       </cut_step>
       <cut_step number="162" type="0" >
          <measure>690</measure>
+         <spezial_function id="9"/>
          <spezial_function id="3"/>
          <spezial_function id="6"/>
-         <spezial_function id="9"/>
       </cut_step>
       <cut_step number="163" type="0" >
          <measure>565</measure>
@@ -650,8 +667,8 @@
       </cut_step>
       <cut_step number="171" type="0" >
          <measure>633</measure>
-         <spezial_function id="6"/>
          <spezial_function id="9"/>
+         <spezial_function id="6"/>
       </cut_step>
       <cut_step number="172" type="2" >
          <measure>61</measure>
@@ -685,9 +702,9 @@
       </cut_step>
       <cut_step number="181" type="0" >
          <measure>690</measure>
+         <spezial_function id="9"/>
          <spezial_function id="3"/>
          <spezial_function id="6"/>
-         <spezial_function id="9"/>
       </cut_step>
       <cut_step number="182" type="0" >
          <measure>565</measure>
@@ -724,9 +741,9 @@
       </cut_step>
       <cut_step number="192" type="0" >
          <measure>690</measure>
+         <spezial_function id="9"/>
          <spezial_function id="3"/>
          <spezial_function id="6"/>
-         <spezial_function id="9"/>
       </cut_step>
       <cut_step number="193" type="2" >
          <measure>125</measure>
@@ -752,7 +769,6 @@
       </cut_step>
       <cut_step number="200" type="6" >
          <comment  type="5" >LEFT 90 DG TURN</comment>
-         <graphic_info>3</graphic_info>
       </cut_step>
       <cut_step number="201" type="0" >
          <measure>60</measure>
@@ -774,8 +790,8 @@
       </cut_step>
       <cut_step number="206" type="0" >
          <measure>633</measure>
-         <spezial_function id="6"/>
          <spezial_function id="9"/>
+         <spezial_function id="6"/>
       </cut_step>
       <cut_step number="207" type="2" >
          <measure>61</measure>
@@ -798,753 +814,7 @@
          <count>1</count>
       </cut_step>
    </program_steps>
-   <program_graphic>
-      <sheet>
-         <length_x>1020</length_x>
-         <length_y>720</length_y>
-         <length_Z>0</length_Z>
-         <sheet_batch>0</sheet_batch>
-         <sheet_lay>1</sheet_lay>
-      </sheet>
-      <label>
-         <pos_x>3</pos_x>
-         <pos_y>381</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>1</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>4</pos_x>
-         <pos_y>332</pos_y>
-         <length_x>113</length_x>
-         <length_y>49</length_y>
-         <label_id>2</label_id>
-         <color>3</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>5</pos_x>
-         <pos_y>220</pos_y>
-         <length_x>112</length_x>
-         <length_y>112</length_y>
-         <label_id>3</label_id>
-         <color>12</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>17</pos_x>
-         <pos_y>530</pos_y>
-         <length_x>100</length_x>
-         <length_y>53</length_y>
-         <label_id>4</label_id>
-         <color>2</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>117</pos_x>
-         <pos_y>530</pos_y>
-         <length_x>100</length_x>
-         <length_y>53</length_y>
-         <label_id>4</label_id>
-         <color>2</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>20</pos_x>
-         <pos_y>156</pos_y>
-         <length_x>97</length_x>
-         <length_y>64</length_y>
-         <label_id>5</label_id>
-         <color>4</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>35</pos_x>
-         <pos_y>583</pos_y>
-         <length_x>91</length_x>
-         <length_y>111</length_y>
-         <label_id>6</label_id>
-         <color>6</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>126</pos_x>
-         <pos_y>583</pos_y>
-         <length_x>91</length_x>
-         <length_y>111</length_y>
-         <label_id>6</label_id>
-         <color>6</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>37</pos_x>
-         <pos_y>26</pos_y>
-         <length_x>80</length_x>
-         <length_y>130</length_y>
-         <label_id>7</label_id>
-         <color>9</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>90</pos_x>
-         <pos_y>446</pos_y>
-         <length_x>127</length_x>
-         <length_y>84</length_y>
-         <label_id>8</label_id>
-         <color>10</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>120</pos_x>
-         <pos_y>188</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>9</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>120</pos_x>
-         <pos_y>317</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>9</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>137</pos_x>
-         <pos_y>54</pos_y>
-         <length_x>80</length_x>
-         <length_y>130</length_y>
-         <label_id>10</label_id>
-         <color>9</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>221</pos_x>
-         <pos_y>44</pos_y>
-         <length_x>60</length_x>
-         <length_y>70</length_y>
-         <label_id>11</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>221</pos_x>
-         <pos_y>118</pos_y>
-         <length_x>60</length_x>
-         <length_y>70</length_y>
-         <label_id>11</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>221</pos_x>
-         <pos_y>192</pos_y>
-         <length_x>60</length_x>
-         <length_y>70</length_y>
-         <label_id>11</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>221</pos_x>
-         <pos_y>266</pos_y>
-         <length_x>60</length_x>
-         <length_y>70</length_y>
-         <label_id>11</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>221</pos_x>
-         <pos_y>340</pos_y>
-         <length_x>60</length_x>
-         <length_y>70</length_y>
-         <label_id>11</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>221</pos_x>
-         <pos_y>410</pos_y>
-         <length_x>60</length_x>
-         <length_y>70</length_y>
-         <label_id>11</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>221</pos_x>
-         <pos_y>480</pos_y>
-         <length_x>60</length_x>
-         <length_y>70</length_y>
-         <label_id>11</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>221</pos_x>
-         <pos_y>550</pos_y>
-         <length_x>60</length_x>
-         <length_y>70</length_y>
-         <label_id>11</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>221</pos_x>
-         <pos_y>620</pos_y>
-         <length_x>60</length_x>
-         <length_y>70</length_y>
-         <label_id>11</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>284</pos_x>
-         <pos_y>65</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>12</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>284</pos_x>
-         <pos_y>190</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>12</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>284</pos_x>
-         <pos_y>315</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>12</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>284</pos_x>
-         <pos_y>440</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>12</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>284</pos_x>
-         <pos_y>565</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>12</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>384</pos_x>
-         <pos_y>23</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>13</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>384</pos_x>
-         <pos_y>84</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>13</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>384</pos_x>
-         <pos_y>145</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>13</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>384</pos_x>
-         <pos_y>206</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>13</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>384</pos_x>
-         <pos_y>267</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>13</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>384</pos_x>
-         <pos_y>328</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>13</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>384</pos_x>
-         <pos_y>389</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>13</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>384</pos_x>
-         <pos_y>450</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>13</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>384</pos_x>
-         <pos_y>511</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>13</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>384</pos_x>
-         <pos_y>572</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>13</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>384</pos_x>
-         <pos_y>633</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>13</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>501</pos_x>
-         <pos_y>49</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>14</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>501</pos_x>
-         <pos_y>178</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>14</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>501</pos_x>
-         <pos_y>307</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>14</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>501</pos_x>
-         <pos_y>436</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>14</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>501</pos_x>
-         <pos_y>565</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>14</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>602</pos_x>
-         <pos_y>49</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>14</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>602</pos_x>
-         <pos_y>178</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>14</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>602</pos_x>
-         <pos_y>307</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>14</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>602</pos_x>
-         <pos_y>436</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>14</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>602</pos_x>
-         <pos_y>565</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>14</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>703</pos_x>
-         <pos_y>49</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>15</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>703</pos_x>
-         <pos_y>178</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>15</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>703</pos_x>
-         <pos_y>307</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>15</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>703</pos_x>
-         <pos_y>436</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>15</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>703</pos_x>
-         <pos_y>565</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>15</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>803</pos_x>
-         <pos_y>315</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>16</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>803</pos_x>
-         <pos_y>440</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>16</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>803</pos_x>
-         <pos_y>565</pos_y>
-         <length_x>97</length_x>
-         <length_y>125</length_y>
-         <label_id>16</label_id>
-         <color>11</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>840</pos_x>
-         <pos_y>101</pos_y>
-         <length_x>60</length_x>
-         <length_y>70</length_y>
-         <label_id>17</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>840</pos_x>
-         <pos_y>171</pos_y>
-         <length_x>60</length_x>
-         <length_y>70</length_y>
-         <label_id>17</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>840</pos_x>
-         <pos_y>241</pos_y>
-         <length_x>60</length_x>
-         <length_y>70</length_y>
-         <label_id>17</label_id>
-         <color>1</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>903</pos_x>
-         <pos_y>23</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>18</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>903</pos_x>
-         <pos_y>84</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>18</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>903</pos_x>
-         <pos_y>145</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>18</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>903</pos_x>
-         <pos_y>206</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>18</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>903</pos_x>
-         <pos_y>267</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>18</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>903</pos_x>
-         <pos_y>328</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>18</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>903</pos_x>
-         <pos_y>389</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>18</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>903</pos_x>
-         <pos_y>450</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>18</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>903</pos_x>
-         <pos_y>511</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>18</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>903</pos_x>
-         <pos_y>572</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>18</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <label>
-         <pos_x>903</pos_x>
-         <pos_y>633</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-         <label_id>18</label_id>
-         <color>5</color>
-         <label_name></label_name>
-      </label>
-      <block>
-         <pos_x>3</pos_x>
-         <pos_y>381</pos_y>
-         <length_x>114</length_x>
-         <length_y>61</length_y>
-      </block>
-      <block>
-         <pos_x>4</pos_x>
-         <pos_y>332</pos_y>
-         <length_x>113</length_x>
-         <length_y>49</length_y>
-      </block>
-      <block>
-         <pos_x>5</pos_x>
-         <pos_y>220</pos_y>
-         <length_x>112</length_x>
-         <length_y>112</length_y>
-      </block>
-      <block>
-         <pos_x>17</pos_x>
-         <pos_y>530</pos_y>
-         <length_x>200</length_x>
-         <length_y>53</length_y>
-      </block>
-      <block>
-         <pos_x>20</pos_x>
-         <pos_y>156</pos_y>
-         <length_x>97</length_x>
-         <length_y>64</length_y>
-      </block>
-      <block>
-         <pos_x>35</pos_x>
-         <pos_y>583</pos_y>
-         <length_x>182</length_x>
-         <length_y>111</length_y>
-      </block>
-      <block>
-         <pos_x>37</pos_x>
-         <pos_y>26</pos_y>
-         <length_x>80</length_x>
-         <length_y>130</length_y>
-      </block>
-      <block>
-         <pos_x>90</pos_x>
-         <pos_y>446</pos_y>
-         <length_x>127</length_x>
-         <length_y>84</length_y>
-      </block>
-      <block>
-         <pos_x>120</pos_x>
-         <pos_y>188</pos_y>
-         <length_x>97</length_x>
-         <length_y>254</length_y>
-      </block>
-      <block>
-         <pos_x>137</pos_x>
-         <pos_y>54</pos_y>
-         <length_x>80</length_x>
-         <length_y>130</length_y>
-      </block>
-      <block>
-         <pos_x>221</pos_x>
-         <pos_y>44</pos_y>
-         <length_x>60</length_x>
-         <length_y>646</length_y>
-      </block>
-      <block>
-         <pos_x>284</pos_x>
-         <pos_y>65</pos_y>
-         <length_x>97</length_x>
-         <length_y>625</length_y>
-      </block>
-      <block>
-         <pos_x>384</pos_x>
-         <pos_y>23</pos_y>
-         <length_x>114</length_x>
-         <length_y>671</length_y>
-      </block>
-      <block>
-         <pos_x>501</pos_x>
-         <pos_y>49</pos_y>
-         <length_x>198</length_x>
-         <length_y>641</length_y>
-      </block>
-      <block>
-         <pos_x>703</pos_x>
-         <pos_y>49</pos_y>
-         <length_x>97</length_x>
-         <length_y>641</length_y>
-      </block>
-      <block>
-         <pos_x>803</pos_x>
-         <pos_y>315</pos_y>
-         <length_x>97</length_x>
-         <length_y>375</length_y>
-      </block>
-      <block>
-         <pos_x>840</pos_x>
-         <pos_y>101</pos_y>
-         <length_x>60</length_x>
-         <length_y>210</length_y>
-      </block>
-      <block>
-         <pos_x>903</pos_x>
-         <pos_y>23</pos_y>
-         <length_x>114</length_x>
-         <length_y>671</length_y>
-      </block>
-   </program_graphic>
+   <program_graphic/>
    <program_process/>
    <program_images/>
    <program_book/>

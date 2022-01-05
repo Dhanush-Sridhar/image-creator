@@ -1,90 +1,128 @@
 #!/bin/bash
+
+# ===============================================
+# Image Creator Script
+# ===============================================
+# This script uses debootstrap to creates an
+# installer whichs wipes and fromats the SSD on
+# /dev/sda and installs the system.
+#
+# Debootstrap uses the host OS; thus the script
+# used to be run on a Ubuntu-based machine.
+#
+# Further Information:
+# https://wiki.ubuntuusers.de/Installation_mit_debootstrap/
+# ===============================================
+
+# allows tracing output separated from error messages
 [ ! -z "${DEBUG}" ] && set -x
 
-###################################################################################################
-# VARIABLES
-###################################################################################################
 
+# Machines Serial Number for Sitemanager / WiMotion Identification
+IMAGE_HOSTNAME="pcm-cutter-<machine-id>"
+
+
+# ===============================================
+# WORK / SCRIPT PATH
+# ===============================================
 SCRIPT_PATH="$(dirname $(readlink -f $0))"
 WORK_PATH="$PWD"
 
-# git hash
-#LAST_COMMIT='git log -1 --pretty=format:"%an, %s, %ai"'
-#echo "${LAST_COMMIT}"
-
-# debootstrap defaults
+# ===============================================
+# DEBOOTSTRAP (DEFAULTS)
+# ===============================================
 APT_CMD="apt"
 ARCH="amd64"
 DISTRO="focal"
 DEBOOTSTRAP_OPTIONS=""
 
-# default (file) paths
+# ===============================================
+# FILE PATHS
+# ===============================================
 INSTALLER_SCRIPT="${WORK_PATH}/image-installer.sh"
 ROOTFS_IMAGE_FILE="${WORK_PATH}/rootfs.img"
 ROOTFS_TARBALL="${WORK_PATH}/rootfs.tar.bz2"
 ROOTFS_PATH="${WORK_PATH}/rootfs"
 DATAFS_PATH="${WORK_PATH}/rootfs/data"
+
+# ===============================================
+# CONF PATHS
+# ===============================================
 ROOTFS_CONF_PATH="${WORK_PATH}/confs/system"
 APP_CONF_PATH="${WORK_PATH}/confs/app"
-PKG_DEB_PATH="${WORK_PATH}/packages/deb"                    # copy <HMI>.deb here
-PKG_TARBALLS_PATH="${WORK_PATH}/packages/tarballs"
-PKG_BINARIES_PATH="${WORK_PATH}/packages/binaries"          # copy <HMI>.bin here
-PKG_SITEMANAGER_PATH="${WORK_PATH}/packages/sitemanager"    # copy sitemanager tarball here
-PKG_RTL8188DRIVER_PATH="${WORK_PATH}/packages/drivers/"     # copy rtl8188eu master-branch dir here
 PERMISSIONS_CONF="${ROOTFS_CONF_PATH}/permissions.conf"
 
-# default image configs
+
+# ===============================================
+# PACKAGE PATHS
+# ===============================================
+PKG_DEB_PATH="${WORK_PATH}/packages/deb"                     # copy <HMI>.deb here
+PKG_TARBALLS_PATH="${WORK_PATH}/packages/tarballs"
+PKG_BINARIES_PATH="${WORK_PATH}/packages/binaries"
+PKG_SITEMANAGER_PATH="${WORK_PATH}/packages/sitemanager"     # copy sitemanager tarball here
+PKG_DRIVER_PATH="${WORK_PATH}/packages/drivers/"
+
+# ===============================================
+# IMAGE CONFIGS (DEFAULTS)
+# ===============================================
 IMAGE_USER="polar"
 IMAGE_PASSWORD="evis32"
-IMAGE_HOSTNAME="Polar-${MACHINE_TYPE_PLACEHOLDER}-${MACHINE_ID_PLACEHOLDER}"
-MACHINE_ID_PLACEHOLDER="123456789"
 MACHINE_TYPE_PLACEHOLDER="PACE"
-#QT_VERSION="5.15.0"
 VNC_PASSWORD="${IMAGE_PASSWORD}"
+#IMAGE_HOSTNAME="pcm-cutter-12345"
+#QT_VERSION="5.15.0"
 
-
-# default options
+# ===============================================
+# OPTIONS (DEFAULT)
+# ===============================================
 CLEAN="NO"
 INSTALL_QT="NO"
 INSTALL_WIFI="NO"
 ENTER_CHROOT="NO"
 IMAGE_TYPE="production"
+IMAGE_TARGET="installer"
 
+# ===============================================
+# PACKAGE LISTS
+# ===============================================
+PKG_BASE_IMAGE="sudo apt-utils"
+PKG_RUNTIME_IMAGE="less wget vim ssh linux-image-generic nodm xinit openbox xterm \
+    network-manager x11-xserver-utils libmbedtls12 apt-offline psmisc dosfstools lsscsi \
+    x11vnc vsftpd libxcb-* libxkbcommon-x11-0 htop nano usbutils unzip lshw lsof neofetch"
+PKG_DEVELOP="git xvfb flex bison libxcursor-dev libxcomposite-dev build-essential \
+    libssl-dev libxcb1-dev libgl1-mesa-dev libmbedtls-dev"
+PKG_BUILD="dpkg-dev dh-make devscripts git-buildpackage quilt make dkms" #linux-headers-generic
+PKG_INSTALLATION_IMAGE="gdisk"
+PKG_BLUETOOTH="bluez"
+PKG_NETWORK="net-tools nmap tcpdump ethtool netdiscover w3m"
+PKG_TIME_SERVER="chrony"
 
-# package lists
+PKG_WEBVIEW_PACKAGES="libnss3 libevent-dev libopus-dev libvpx6 libwebp-dev libssl-dev \
+    libxcursor-dev libxcomposite-dev libxdamage-dev libxrandr-dev libfontconfig1-dev libxss-dev \
+    libwebp-dev libjsoncpp-dev libopus-dev libminizip-dev libavutil-dev libavformat-dev \
+    libavcodec-dev libevent-dev libvpx-dev libsnappy-dev libre2-dev libprotobuf-dev protobuf-compiler \
+    libnss3-dev libpci-dev libpulse-dev libudev-dev libxtst-dev \
+    nodejs gyp ninja-build bison build-essential gperf flex python2 \
+    libasound2-dev libcups2-dev libdrm-dev libegl1-mesa-dev"
+    # TODO: remove unused packages later
+
+# install qt
 #QT_SHORT_VERSION="$(echo ${QT_VERSION%.*} | tr -d '.')"
-# build-essential: required to create a Debian package (deb)... libc, gcc, g++, make, dpkg-dev etc.
-BASE_IMAGE_PACKAGES="sudo apt-utils"
-RUNTIME_IMAGE_PACKAGES="less wget vim ssh linux-image-generic nodm xinit openbox xterm network-manager x11-xserver-utils libmbedtls12 apt-offline psmisc dosfstools lsscsi x11vnc vsftpd libxcb-* libxkbcommon-x11-0 htop nano usbutils unzip lshw lsof"
-DEV_IMAGE_PACKAGES="git xvfb flex bison libxcursor-dev libxcomposite-dev build-essential libssl-dev libxcb1-dev libgl1-mesa-dev libmbedtls-dev"
-INSTALLATION_IMAGE_PACKAGES="gdisk"
-
-BUILD_PACKAGES="dpkg-dev dh-make devscripts git-buildpackage quilt make dkms"
-BLUETOOTH_PACKAGES="bluez"
-NETWORK_PACKAGES="net-tools nmap netdiscover"
-TIME_PACKAGES="chrony"
-
-#ALL_DEV_PKG="${RUNTIME_IMAGE_PACKAGES} ${BLUETOOTH_PACKAGES} ${BUILD_PACKAGES} ${NETWORK_PACKAGES} ${TIME_PACKAGES}"
- 
-
 #QT_IMAGE_PACKAGES="qt${QT_SHORT_VERSION}declarative qt${QT_SHORT_VERSION}quickcontrols2 qt${QT_SHORT_VERSION}graphicaleffects qt${QT_SHORT_VERSION}svg qt${QT_SHORT_VERSION}serialport"
 
-# tag::TODO 
-# configure QWebView 
-# https://wiki.qt.io/QtWebEngine/How_to_Try
-# https://stackoverflow.com/questions/47100545/how-to-build-qtwebengine-5-10-from-source
-WEBVIEW_PACKAGES="libssl-dev libxcursor-dev libxcomposite-dev libxdamage-dev libxrandr-dev libfontconfig1-dev libxss-dev libsrtp0-dev libwebp-dev libjsoncpp-dev libopus-dev libminizip-dev libavutil-dev libavformat-dev libavcodec-dev libevent-dev libvpx-dev libsnappy-dev libre2-dev libprotobuf-dev protobuf-compiler"
-# end::TODO
 
-# option lists
+# ===============================================
+# OPTION LIST
+# ===============================================
 ARCH_LIST="i386 amd64 armel armhf"
 IMAGE_TYPE_LIST="production development installation"
 
 
-###################################################################################################
-# FUNCTIONS
-###################################################################################################
+# ==================== FUNCTIONS ====================== #
 
+# ===============================================
+# FUNCTIONS - ABOUT / USAGE
+# ===============================================
 function about() {
 echo "############################################"
 echo "# Ubuntu image creator                     #"
@@ -133,6 +171,9 @@ function usage() {
     echo ""
 }
 
+# ===============================================
+# FUNCTIONS - LOG
+# ===============================================
 function console_log() {
     echo "$1"
 }
@@ -142,9 +183,14 @@ function error() {
     exit 1
 }
 
+# ===============================================
+# FUNCTIONS - MOUNT /DEV /SYS /PROC
+# ===============================================
 function mount_dev_sys_proc() {
     local _ROOTFS_PATH="$1"
+    console_log "=========================================================="
     console_log "### Mount dev, proc, sys to rootfs ###"
+    console_log "=========================================================="
     [ -e "${_ROOTFS_PATH}" ] || error "Path ${_ROOTFS_PATH} not found!"
     mount -o bind /dev "${_ROOTFS_PATH}/dev"
     mount -o bind /dev/pts "${_ROOTFS_PATH}/dev/pts"
@@ -154,7 +200,9 @@ function mount_dev_sys_proc() {
 
 function umount_dev_sys_proc() {
     local _ROOTFS_PATH="$1"
+    console_log "=========================================================="
     console_log "### Unmount dev, proc, sys from rootfs ###"
+    console_log "=========================================================="
     [ -e "${_ROOTFS_PATH}" ] || error "Path ${_ROOTFS_PATH} not found!"
     umount "${_ROOTFS_PATH}/dev/pts"
     umount "${_ROOTFS_PATH}/dev"
@@ -162,13 +210,18 @@ function umount_dev_sys_proc() {
     umount "${_ROOTFS_PATH}/proc"
 }
 
+# ===============================================
+# FUNCTIONS - CREATE PARTITIONS
+# ===============================================
 function create_partitions() {
     local _IMAGE_TARGET="$1"
     local _BOOT_PARTITION="$2"
     local _ROOTFS_PARTITION="$3"
     local _DATAFS_PARTITION="$4"
 
+    console_log "=========================================================="
     console_log "### Create partitions for ${_IMAGE_TARGET} ###"
+    console_log "=========================================================="
     sgdisk -Z ${_IMAGE_TARGET}
 
     # boot partition
@@ -187,6 +240,9 @@ function create_partitions() {
     mkfs.vfat ${_DATAFS_PARTITION}
 }
 
+# ===============================================
+# FUNCTIONS - CREATE PARTITIONS
+# ===============================================
 function mount_rootfs_datafs() {
     local _ROOTFS_PARTITION="$1"
     local _ROOTFS_PATH="$2"
@@ -199,11 +255,12 @@ function mount_rootfs_datafs() {
 }
 
 
-###################################################################################################
-# PARAMETERS
-###################################################################################################
 
-## COMMAND-LINE ARGUMENTS / TRIGGER
+# ==================== PARAMETERS ====================== #
+
+# ===============================================
+# PARAMETERS - CLI ARGUMENTS / TRIGGER
+# ===============================================
 POSITIONAL=() 
 while [[ $# -gt 0 ]]
 do
@@ -222,7 +279,7 @@ do
             ;;
         --clean)
             CLEAN="YES"
-			[ -e "${ROOTFS_PATH}" ] && umount_dev_sys_proc "${ROOTFS_PATH}" || echo "No remaining mount to rootfs. Clean canvas! :)"
+            [ -e "${ROOTFS_PATH}" ] && umount_dev_sys_proc "${ROOTFS_PATH}" || echo "No remaining mount to rootfs. Clean canvas! :)"
             rm -rf "${ROOTFS_PATH}"
             shift
             ;;
@@ -266,12 +323,13 @@ done
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
 
-###################################################################################################
-# CHECKS
-###################################################################################################
+# ==================== CHECKS ====================== #
 
 [ "$(whoami)" != "root" ] && console_log "You must be root or use the sudo command!" && exit 1
 
+# ===============================================
+# DEBOOTSTRAP
+# ===============================================
 DEBOOTSTRAP_CMD="$(which debootstrap)"
 QEMU_DEBOOTSTRAP_CMD="$(which qemu-debootstrap)"
 
@@ -280,13 +338,18 @@ console_log ""
 
 if [ -z "${DEBOOTSTRAP_CMD}" -o -z "${QEMU_DEBOOTSTRAP_CMD}" ]
 then
+    console_log "=========================================================="
     console_log "### Installing needed host packages ###"
+    console_log "=========================================================="
     ${APT_CMD} update
     ${APT_CMD} -y install debootstrap qemu-user-static || error "Could not install host packages!"
     DEBOOTSTRAP_CMD="$(which debootstrap)"
     QEMU_DEBOOTSTRAP_CMD="$(which qemu-debootstrap)"
 fi
 
+# ===============================================
+# DISTRO
+# ===============================================
 DISTRO_LIST=$(find /usr/share/debootstrap/scripts/ -type l -print | xargs -I {} basename {})
 
 DISTRO_OK="false"
@@ -326,6 +389,9 @@ then
     exit 1 
 fi
 
+# ===============================================
+# IMAGE TARGET
+# ===============================================
 if [ ! -z "${IMAGE_TARGET}" ]
 then
     case ${IMAGE_TARGET} in
@@ -362,18 +428,20 @@ then
     esac
 fi
 
-## Packages to install
+# ===============================================
+# PACKAGES TO INSTALL
+# ===============================================
 if [ ! -z "${IMAGE_TYPE}" ]
 then
     case ${IMAGE_TYPE} in
         production)
-            IMAGE_PACKAGE_LIST="${RUNTIME_IMAGE_PACKAGES} ${BLUETOOTH_PACKAGES} ${BUILD_PACKAGES} ${NETWORK_PACKAGES} ${TIME_PACKAGES}"
+            IMAGE_PACKAGE_LIST="${PKG_RUNTIME_IMAGE} ${PKG_BLUETOOTH} ${PKG_BUILD} ${PKG_NETWORK} ${PKG_TIME}"
             ;;
         development)
-            IMAGE_PACKAGE_LIST="${DEV_IMAGE_PACKAGES}"
+            IMAGE_PACKAGE_LIST="${PKG_DEV_IMAGE}"
             ;;
         installation)
-            IMAGE_PACKAGE_LIST="${INSTALLATION_IMAGE_PACKAGES} ${RUNTIME_IMAGE_PACKAGES}"
+            IMAGE_PACKAGE_LIST="${PKG_INSTALLATION_IMAGE} ${PKG_RUNTIME_IMAGE}"
             ;;
         *)
             console_log "Unknown image type ${IMAGE_TYPE}!"
@@ -391,20 +459,26 @@ mkdir -p "${ROOTFS_PATH}"
 sudo -u $SUDO_USER mkdir -p "${PKG_DEB_PATH}" "${PKG_TARBALLS_PATH}" "${PKG_BINARIES_PATH}"
 
 
-###################################################################################################
-###################################################################################################
-#                                                                                                 #
-#                                           MAIN                                                  #
-#                                                                                                 #
-###################################################################################################
-###################################################################################################
+# ====================== MAIN ======================== #
 
 export DEBIAN_FRONTEND=noninteractive
 
+console_log "====================================================="
+console_log "#   Image-Creator v1.0                              #"
+console_log "#                                                   #"
+console_log "#   Building an installer/image with ...            #"
+console_log "#   ${ARCH}                                         #"
+console_log "#   ${DISTRO}                                       #"
+console_log "#   ${IMAGE_TYPE}                                   #"
+console_log "#   ${IMAGE_TARGET}                                 #"
+console_log "#                                                   #"
+console_log "====================================================="
 
-###############################################################################
-# LOOP
-###############################################################################
+
+
+# ===============================================
+# IMAGE-TARGET: LOOP
+# ===============================================
 if [ "${IMAGE_TARGET_TYPE}" = "loop" ]
 then
     if [ ! -e "${ROOTFS_IMAGE_FILE}" ]
@@ -426,9 +500,9 @@ then
     mount_rootfs_datafs "${ROOTFS_PARTITION}" "${ROOTFS_PATH}" "${DATAFS_PARTITION}" "${DATAFS_PATH}"
 fi
 
-###############################################################################
-# DEV
-###############################################################################
+# ===============================================
+# IMAGE-TARGET: DEV
+# ===============================================
 if [ "${IMAGE_TARGET_TYPE}" = "dev" ]
 then
     BOOT_PARTITION="${IMAGE_TARGET}1"
@@ -440,23 +514,31 @@ then
     mount_rootfs_datafs "${ROOTFS_PARTITION}" "${ROOTFS_PATH}" "${DATAFS_PARTITION}" "${DATAFS_PATH}"
 fi
 
+# ===============================================
 # create an initial rootfs using debootstrap
+# ===============================================
 if [ ! -e "${ROOTFS_PATH}/etc/os-release" ]
 then
+    console_log "=========================================================="
     console_log "### Create rootfs ### "
+    console_log "=========================================================="
     if [ "${ARCH}" != "i386" -o "${ARCH}" != "amd64" ]
     then
-        HOSTNAME=${IMAGE_HOSTNAME} ${QEMU_DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH} --include "${BASE_IMAGE_PACKAGES}"
+        HOSTNAME=${IMAGE_HOSTNAME} ${QEMU_DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH} --include "${PKG_BASE_IMAGE}"
     else
-        HOSTNAME=${IMAGE_HOSTNAME} ${DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH} --include "${BASE_IMAGE_PACKAGES}"
+        HOSTNAME=${IMAGE_HOSTNAME} ${DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH} --include "${PKG_BASE_IMAGE}"
     fi
 fi
 DISTRO_ID="$(source rootfs/etc/os-release && echo $ID)"
 
 mount_dev_sys_proc "${ROOTFS_PATH}"
 
+# ===============================================
 # create the sources.list files for apt:
+# ===============================================
+console_log "=========================================================="
 console_log "### Create sources.list ###"
+console_log "=========================================================="
 
 if [ "${DISTRO_ID}" = "ubuntu" ]
 then
@@ -486,15 +568,21 @@ then
     fi
 fi
 
+console_log "=========================================================="
 console_log "### Configure locales ###"
+console_log "=========================================================="
 chroot ${ROOTFS_PATH} locale-gen de_DE.UTF-8
 
+console_log "=========================================================="
 console_log "### Configure dash/bash ###"
+console_log "=========================================================="
 chroot ${ROOTFS_PATH} /bin/bash -c 'echo "dash dash/sh boolean false" | debconf-set-selections'
 chroot ${ROOTFS_PATH} /bin/bash -c 'DEBIAN_FRONTEND=noninteractive dpkg-reconfigure dash'
 
 # update rootfs
+console_log "=========================================================="
 console_log "### Update rootfs ###"
+console_log "=========================================================="
 cp /etc/resolv.conf ${ROOTFS_PATH}/etc
 chroot ${ROOTFS_PATH} ${APT_CMD} update
 POLICY_RC_D_FILE="${ROOTFS_PATH}/usr/sbin/policy-rc.d"
@@ -502,108 +590,127 @@ install -m 0644 ${ROOTFS_CONF_PATH}/policy-rc.d ${POLICY_RC_D_FILE}
 chroot ${ROOTFS_PATH} ${APT_CMD} -y dist-upgrade
 
 # install some fundamental packages
+console_log "=========================================================="
 console_log "### Install packages in rootfs ###"
+console_log "=========================================================="
 chroot ${ROOTFS_PATH} ${APT_CMD} update
 chroot ${ROOTFS_PATH} ${APT_CMD} -y install ${IMAGE_PACKAGE_LIST}
 chroot ${ROOTFS_PATH} ${APT_CMD} -y clean
 
-###############################################################################
-# ALL BUT INSTALLATION
-###############################################################################
+# ===============================================
+# IMAGE-TYPE: NOT INSTALLATION
+# ===============================================
+
+console_log "=========================================================="
 console_log "### Install local packages to the rootfs ###"
+console_log "=========================================================="
 if [ "${IMAGE_TYPE}" != "installation" ]
 then
-    #################### Qt 5.15.0 by Stephan Binner ##########################################################
+    #################### Qt 5.15.0 by Stephan Binner ###########################
     if [ ${INSTALL_QT} = "YES" ]
     then
         ## Tarball packages
         for TAR_FILE in $(ls -1 ${PKG_TARBALLS_PATH}/*.tar*)
-        do
+        do  
             console_log "## Install $(basename ${TAR_FILE}) to rootfs ##"
+            console_log "=========================================================="
             tar -xf ${TAR_FILE} -C ${ROOTFS_PATH}
         done
     fi
 
 
-    #################### Debian packages ##########################################################
+    #################### Debian packages ########################################
     mount -o bind "${PKG_DEB_PATH}" "${ROOTFS_PATH}/mnt"
     for DEB_FILE in $(ls -1 ${PKG_DEB_PATH}/*.deb)
     do
         console_log "## Install $(basename ${DEB_FILE}) to rootfs ##"
+        console_log "=========================================================="
         chroot "${ROOTFS_PATH}" dpkg -i "/mnt/$(basename ${DEB_FILE})"
     done
     umount "${ROOTFS_PATH}/mnt"
 
     ## Binary files
     find ${PKG_BINARIES_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -r {} ${ROOTFS_PATH} \;
+fi
 
 
-    #################### SiteManager (Remote Maintenance) #########################################
-    echo "Install Site-Manager for Remote Maintenance"
+# ===============================================
+# SITEMANAGER
+# ===============================================
+
+console_log "Install Site-Manager for Remote Maintenance"
     
-	for TAR_FILE in $(ls -1 ${PKG_SITEMANAGER_PATH}/*.tar*)
-	do
-	    console_log "## Install $(basename ${TAR_FILE}) to rootfs ##"
-	    tar -xf ${TAR_FILE} -C ${ROOTFS_PATH}/tmp
-        chroot "${ROOTFS_PATH}" ls -al "/tmp/"
+for TAR_FILE in $(ls -1 ${PKG_SITEMANAGER_PATH}/*.tar*)
+do
+    console_log "## Install $(basename ${TAR_FILE}) to rootfs ##"
+    console_log "=========================================================="
+    tar -xvf ${TAR_FILE} -C ${ROOTFS_PATH}/tmp
+    chroot "${ROOTFS_PATH}" ls -al "/tmp/"
 # Hint: this is formated because of EOF to pipe the install.sh script to chroot
 # ---
 cat <<EOF | chroot "${ROOTFS_PATH}" 
 cd /tmp/SiteManager_Installer/
-./install.sh
+./install.sh || echo "Failed to remove the directory"
 EOF
 # ---
-        chroot "${ROOTFS_PATH}" rm -r "/tmp/SiteManager_Installer" && chroot "${ROOTFS_PATH}" rm -r "/tmp/INSTALL_SITEMANAGER"
-    done
-    echo "Site-Manager installation complete."
+    chroot "${ROOTFS_PATH}" rm -r "/tmp/SiteManager_Installer" && chroot "${ROOTFS_PATH}" rm -r "/tmp/INSTALL_SITEMANAGER"
+done
 
 
-    #################### RTL8188EU driver for Bluetooth/WiFi USB-Adapter ##########################
-    if [ ${INSTALL_WIFI} = "YES" ]
-    then
-        console_log "## Install RTL8188EU Bluetooth/WiFi driver to rootfs ##"
-    
-# Hint: formated because of EOF to chroot pipe
-# ---
-cat <<EOF | chroot "${ROOTFS_PATH}"
-git clone https://github.com/lwfinger/rtl8188eu.git 
-cd rtl8188eu-master
-make all
+# ===============================================
+# WIFI
+# ===============================================
+# Get Driver here
+# https://www.edimax.com/edimax/download/download/data/edimax/global/download/for_home/wireless_adapters/wireless_adapters_n150/ew-7611ulb
+
+if [ ${INSTALL_WIFI} = "YES" ]
+then
+    for TAR_FILE in $(ls -1 ${PKG_DRIVER_PATH}/*.tar.gz*)
+    do
+        console_log "## Install $(basename ${TAR_FILE}) to rootfs ##"
+        console_log "=========================================================="
+        tar -xvzf ${TAR_FILE} -C ${ROOTFS_PATH}/tmp
+        chroot "${ROOTFS_PATH}" ls -al "/tmp/"
+    # Hint: this is formated because of EOF to pipe the install.sh script to chroot
+    # ---
+cat <<EOF | chroot "${ROOTFS_PATH}" 
+cd /tmp/rtl8723BU_WiFi_linux_v5.2.17.1_20190123/
+make
 sudo make install
-cp rtl8188eufw.bin /lib/firmware/rtlwifi/rtl8188eufw.bin
-touch /etc/NetworkManager/conf.d/80-wifi.conf
-echo "[device]" > /etc/NetworkManager/conf.d/80-wifi.conf
-echo "wifi.scan-rand-mac-address=no" >> /etc/NetworkManager/conf.d/80-wifi.conf
-console_log "RTL8188EU driver installation complete."
+sudo modprobe -v 8723bu
 EOF
-# ---
-
-    fi
+    # ---
+        chroot "${ROOTFS_PATH}" rm -r "/tmp/rtl8723BU_WiFi_linux_v5.2.17.1_20190123/"
+    done
 fi
 
 
+console_log "=========================================================="
 console_log "### User management ###"
+console_log "=========================================================="
 echo -e "${IMAGE_PASSWORD}\n${IMAGE_PASSWORD}\n" | chroot ${ROOTFS_PATH} passwd root
 
 chroot ${ROOTFS_PATH} adduser --gecos "" --disabled-password ${IMAGE_USER}
 chroot ${ROOTFS_PATH} usermod -a -G sudo,video,audio,plugdev ${IMAGE_USER}
 
-chroot ${ROOTFS_PATH} adduser --gecos "" --disabled-password --force-badname BoxPC                  #TODO: changePW
-echo -e "BoxPC\nBoxPC\n" | chroot ${ROOTFS_PATH} passwd BoxPC                                       #TODO: changePW
+chroot ${ROOTFS_PATH} adduser --gecos "" --disabled-password --force-badname BoxPC     #TODO: changePW
+echo -e "BoxPC\nBoxPC\n" | chroot ${ROOTFS_PATH} passwd BoxPC                          #TODO: changePW
 
 echo -e "${IMAGE_PASSWORD}\n${IMAGE_PASSWORD}\n" | chroot ${ROOTFS_PATH} passwd ${IMAGE_USER}
 
-
+console_log "=========================================================="
 console_log "### Configure rootfs ###"
+console_log "=========================================================="
+
 ## install (pre)config files to rootfs
 find ${ROOTFS_CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -r {} ${ROOTFS_PATH} \;
 
 echo "${IMAGE_HOSTNAME}" > ${ROOTFS_PATH}/etc/hostname
 sed -i "s/replace-me/${IMAGE_HOSTNAME}/g" ${ROOTFS_PATH}/etc/hosts
 
-###############################################################################
-# DEVELOPMENT 
-###############################################################################
+# ===============================================
+# IMAGE-TYPE: DEVELOPMENT
+# ===============================================
 if [ "${IMAGE_TYPE}" != "development" ]
 then
     sed -i "s/NODM_ENABLED=false/NODM_ENABLED=true/g" ${ROOTFS_PATH}/etc/default/nodm
@@ -619,15 +726,18 @@ then
     chroot "${ROOTFS_PATH}" chown -R ${IMAGE_USER}:${IMAGE_USER} /home/${IMAGE_USER}/.vnc/
 fi
 
-###############################################################################
-# PRODUCTION
-###############################################################################
+# ===============================================
+# IMAGE-TYPE: PRODUCTION
+# ===============================================
 if [ "${IMAGE_TYPE}" = "production" ]
 then
     chroot "${ROOTFS_PATH}" ln -sf /data/ispv_root /ispv_root
     find ${APP_CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -a {} ${ROOTFS_PATH} \;
 fi
 
+# ===============================================
+# PERMISSIONS / OWNER
+# ===============================================
 ## configure file permissions and owner
 for PERMS in $(cat ${PERMISSIONS_CONF})
 do
@@ -638,11 +748,16 @@ do
     chroot "${ROOTFS_PATH}" chmod ${FILE_PERM} ${FILE_NAME}
 done
 
-## ntp cofiguration
-   console_log "### ntp configuration ###"
-   mv ${ROOTFS_PATH}/etc/ntp.conf ${ROOTFS_PATH}/etc/ntp.conf.standard
-   # copy target ntp configuration
-   install -m 0644 ${ROOTFS_CONF_PATH}/etc/ntp.conf ${ROOTFS_PATH}/etc/
+# ===============================================
+# NTP
+# ===============================================
+console_log "=========================================================="
+console_log "### ntp configuration ###"
+console_log "=========================================================="
+mv ${ROOTFS_PATH}/etc/ntp.conf ${ROOTFS_PATH}/etc/ntp.conf.standard
+# copy target ntp configuration
+install -m 0644 ${ROOTFS_CONF_PATH}/etc/ntp.conf ${ROOTFS_PATH}/etc/
+#install -m 0644 ${ROOTFS_CONF_PATH}/etc/chrony.conf ${ROOTFS_PATH}/etc/
 
 ## add system tool calls for application in sudoers (mount, etc...)
 ##
@@ -653,29 +768,39 @@ done
 # ALL       ALL =(ALL) NOPASSWD: /sbin/halt
 # ALL       ALL =(ALL) NOPASSWD: /sbin/hwclock
 ##
-    console_log "### Configure sudoers ###"
-    chroot "${ROOTFS_PATH}" chmod +w /etc/sudoers
-    echo -e "\n## Polar Cutter Application Calls" >> ${ROOTFS_PATH}/etc/sudoers
-    echo -e "ALL\tALL =(ALL) NOPASSWD: /bin/mount" >> ${ROOTFS_PATH}/etc/sudoers
-    echo -e "ALL\tALL =(ALL) NOPASSWD: /bin/umount" >> ${ROOTFS_PATH}/etc/sudoers
-    echo -e "ALL\tALL =(ALL) NOPASSWD: /bin/date" >> ${ROOTFS_PATH}/etc/sudoers
-    echo -e "ALL\tALL =(ALL) NOPASSWD: /sbin/reboot" >> ${ROOTFS_PATH}/etc/sudoers
-    echo -e "ALL\tALL =(ALL) NOPASSWD: /sbin/halt" >> ${ROOTFS_PATH}/etc/sudoers
-    echo -e "ALL\tALL =(ALL) NOPASSWD: /sbin/hwclock" >> ${ROOTFS_PATH}/etc/sudoers
-    echo -e "## ---\n" >> ${ROOTFS_PATH}/etc/sudoers
-    chroot "${ROOTFS_PATH}" chmod -w /etc/sudoers
+console_log "=========================================================="
+console_log "### Configure sudoers ###"
+console_log "=========================================================="
+chroot "${ROOTFS_PATH}" chmod +w /etc/sudoers
+echo -e "\n## Polar Cutter Application Calls" >> ${ROOTFS_PATH}/etc/sudoers
+echo -e "ALL\tALL =(ALL) NOPASSWD: /bin/mount" >> ${ROOTFS_PATH}/etc/sudoers
+echo -e "ALL\tALL =(ALL) NOPASSWD: /bin/umount" >> ${ROOTFS_PATH}/etc/sudoers
+echo -e "ALL\tALL =(ALL) NOPASSWD: /bin/date" >> ${ROOTFS_PATH}/etc/sudoers
+echo -e "ALL\tALL =(ALL) NOPASSWD: /sbin/reboot" >> ${ROOTFS_PATH}/etc/sudoers
+echo -e "ALL\tALL =(ALL) NOPASSWD: /sbin/halt" >> ${ROOTFS_PATH}/etc/sudoers
+echo -e "ALL\tALL =(ALL) NOPASSWD: /sbin/hwclock" >> ${ROOTFS_PATH}/etc/sudoers
+echo -e "## ---\n" >> ${ROOTFS_PATH}/etc/sudoers
+chroot "${ROOTFS_PATH}" chmod -w /etc/sudoers
 
+
+
+
+# ===============================================
+# OPTION: ENTER CHROOT
+# ===============================================
 if [ "${ENTER_CHROOT}" = "YES" ]
 then
     chroot "${ROOTFS_PATH}"
 fi
 
-###############################################################################
-# DEV / LOOP 
-###############################################################################
+# ===============================================
+# IMAGE-TARGET: DEV / LOOP
+# ===============================================
 if [ "${IMAGE_TARGET_TYPE}" = "dev" -o "${IMAGE_TARGET_TYPE}" = "loop" ]
 then
+    console_log "=========================================================="
     console_log "### Install fstab ###"
+    console_log "=========================================================="
     UUID_ROOTFS=$(/bin/lsblk -o UUID -n ${ROOTFS_PARTITION})
     UUID_DATAFS=$(/bin/lsblk -o UUID -n ${DATAFS_PARTITION})
     echo "Default fstab before modification:"
@@ -687,8 +812,9 @@ UUID=${UUID_ROOTFS}  /          ext4  errors=remount-ro  0  1
 UUID=${UUID_DATAFS}  /data      vfat  uid=${IMAGE_USER},gid=${IMAGE_USER}  0  2
 EOF
 # ---
-
+    console_log "=========================================================="
     console_log "### Install bootloader ###"
+    console_log "=========================================================="
     chmod -x "${ROOTFS_PATH}/etc/grub.d/30_os-prober"
     chroot "${ROOTFS_PATH}" grub-install --force ${IMAGE_TARGET}
     chroot "${ROOTFS_PATH}" update-grub
@@ -699,12 +825,14 @@ sync
 
 umount_dev_sys_proc "${ROOTFS_PATH}"
 
-###############################################################################
+# ===============================================
 # TARBALL / INSTALLER
-###############################################################################
+# ===============================================
 if [ "${IMAGE_TARGET_TYPE}" = "tarball" -o "${IMAGE_TARGET_TYPE}" = "installer" ]
 then
+    console_log "=========================================================="
     console_log "### Create rootfs tarball ###"
+    console_log "=========================================================="
     pushd "${ROOTFS_PATH}" &> /dev/null
     tar -cjf ${ROOTFS_TARBALL} * || exit 1
     chgrp $SUDO_GID "${ROOTFS_TARBALL}"
@@ -724,9 +852,9 @@ then
     fi
 fi
 
-###############################################################################
-# INSTALLATION
-###############################################################################
+# ===============================================
+# IMAGE-TYPE: INSTALLATION
+# ===============================================
 if [ "${IMAGE_TYPE}" = "installation" ]
 then
     LATEST_INSTALLER_BINARY="$(readlink -f "${WORK_PATH}/${IMAGE_TYPE}-image-installer_latest.bin")"
@@ -741,6 +869,9 @@ then
     fi
 fi
 
+# ===============================================
+# IMAGE-TYPE: DEV / LOOP
+# ===============================================
 if [ "${IMAGE_TARGET_TYPE}" = "dev" -o "${IMAGE_TARGET_TYPE}" = "loop" ]
 then
     losetup -D
@@ -748,16 +879,6 @@ then
     umount "${ROOTFS_PATH}"
 fi
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+console_log "=========================================================="
+console_log "### DONE! ###"
+console_log "=========================================================="

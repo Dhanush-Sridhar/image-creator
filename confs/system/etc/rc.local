@@ -1,0 +1,19 @@
+#!/bin/sh -e
+
+# Run Control Script (i.e. on autostart )
+# 
+# This script is executed at the end of each multiuser runlevel.
+# Make sure that the execution bit is set (chmod +x).
+
+# Load German Keyboard
+loadkeys de
+
+# Connect Wifi (TODO: just for development; remove this later !)
+nmcli radio wifi on
+nmcli d wifi connect Polarsmart password 1906198815925835
+
+# Start Sitemanager automatically on startup / after reboot
+/etc/init.d/sitemanager start
+
+# Make sure that the script will "exit 0" on success or any other value on error.
+exit 0

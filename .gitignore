@@ -1,5 +1,12 @@
 rootfs/
-packages/
+
+# artefacts
+packages/binaries
+packages/deb
+packages/drivers
+packages/sitemanager
+packages/tarballs
+
 rootfs*.img
 rootfs*.tar.*
 *.bin
