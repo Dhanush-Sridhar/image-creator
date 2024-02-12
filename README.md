@@ -60,3 +60,13 @@ If you forget a " for instance PKG="bla bla (no closing"), this installer can be
     - Note: Sitemanager tar is patched for polar usage.
     - Note: It is an old version. We should use a newer version. And add it as submodule
     - Repo: `git clone git@bitbucket.org:polar-cutting/sitemanagertar.git`
+    - Autostart: /etc/init.d/sitemanager start
+
+3. confs/app: .config / ISPV
+    - polar not POLAR MOHR
+    - maybe no initial config is better
+    - cleanup: FCode, etc
+    - ISPV_ROOT contains lot of cutting programms
+
+4. openbox autostart
+    - starts only /opt/pds-cutter/pds_cutter from PURE    
