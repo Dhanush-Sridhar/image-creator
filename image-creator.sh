@@ -19,7 +19,7 @@
 
 
 # Machines Serial Number for Sitemanager / WiMotion Identification
-IMAGE_HOSTNAME="pcm-cutter-<machine-id>"
+IMAGE_HOSTNAME="nprohd-cutter"
 
 
 # ===============================================
@@ -759,15 +759,6 @@ mv ${ROOTFS_PATH}/etc/ntp.conf ${ROOTFS_PATH}/etc/ntp.conf.standard
 install -m 0644 ${ROOTFS_CONF_PATH}/etc/ntp.conf ${ROOTFS_PATH}/etc/
 #install -m 0644 ${ROOTFS_CONF_PATH}/etc/chrony.conf ${ROOTFS_PATH}/etc/
 
-## add system tool calls for application in sudoers (mount, etc...)
-##
-# ALL       ALL =(ALL) NOPASSWD: /bin/mount
-# ALL       ALL =(ALL) NOPASSWD: /bin/umount
-# ALL       ALL =(ALL) NOPASSWD: /bin/date
-# ALL       ALL =(ALL) NOPASSWD: /sbin/reboot
-# ALL       ALL =(ALL) NOPASSWD: /sbin/halt
-# ALL       ALL =(ALL) NOPASSWD: /sbin/hwclock
-##
 console_log "=========================================================="
 console_log "### Configure sudoers ###"
 console_log "=========================================================="
