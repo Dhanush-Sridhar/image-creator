@@ -59,7 +59,6 @@ PERMISSIONS_CONF="${ROOTFS_CONF_PATH}/permissions.conf"
 PKG_DEB_PATH="${WORK_PATH}/packages/deb"                     # copy <HMI>.deb here
 PKG_TARBALLS_PATH="${WORK_PATH}/packages/tarballs"
 PKG_BINARIES_PATH="${WORK_PATH}/packages/binaries"
-PKG_SITEMANAGER_PATH="${WORK_PATH}/packages/sitemanager"     # copy sitemanager tarball here
 PKG_DRIVER_PATH="${WORK_PATH}/packages/drivers/"
 
 # ===============================================
@@ -81,6 +80,7 @@ INSTALL_WIFI="NO"
 ENTER_CHROOT="NO"
 IMAGE_TYPE="production"
 IMAGE_TARGET="installer"
+MACHINE="nprohd"
 
 # ===============================================
 # PACKAGE LISTS
@@ -88,7 +88,8 @@ IMAGE_TARGET="installer"
 PKG_BASE_IMAGE="sudo apt-utils"
 PKG_RUNTIME_IMAGE="less wget vim ssh linux-image-generic nodm xinit openbox xterm \
     network-manager x11-xserver-utils libmbedtls12 apt-offline psmisc dosfstools lsscsi \
-    x11vnc vsftpd libxcb-* libxkbcommon-x11-0 htop nano usbutils unzip lshw lsof neofetch"
+    x11vnc vsftpd libxcb-* libxkbcommon-x11-0 htop nano usbutils unzip lshw lsof \
+    ffmpeg libglu1-mesa libpcre2-16-0"
 PKG_DEVELOP="git xvfb flex bison libxcursor-dev libxcomposite-dev build-essential \
     libssl-dev libxcb1-dev libgl1-mesa-dev libmbedtls-dev"
 PKG_BUILD="dpkg-dev dh-make devscripts git-buildpackage quilt make dkms" #linux-headers-generic
@@ -116,7 +117,7 @@ PKG_WEBVIEW_PACKAGES="libnss3 libevent-dev libopus-dev libvpx6 libwebp-dev libss
 # ===============================================
 ARCH_LIST="i386 amd64 armel armhf"
 IMAGE_TYPE_LIST="production development installation"
-
+MACHINE_LIST="nprohd pure nplus"
 
 # ==================== FUNCTIONS ====================== #
 
@@ -154,6 +155,10 @@ function usage() {
     echo "      Specifies the image type. Available image types: ${IMAGE_TYPE_LIST// /, }"
     echo "      Default: ${IMAGE_TYPE}"
     echo ""
+    echo "  --machine <string> :"
+    echo "      Specifies the image type. Available image types: ${MACHINE_LIST// /, }"
+    echo "      Default: ${MACHINE}"
+    echo ""
     echo "  --install-qt :"
     echo "      Installs the Stephan Binner qt version 5.15.0 ubuntu package."
     echo ""
@@ -175,6 +180,10 @@ function usage() {
 # FUNCTIONS - LOG
 # ===============================================
 function console_log() {
+    echo "$1"
+}
+
+function step_log() {
     echo "$1"
 }
 
@@ -254,6 +263,21 @@ function mount_rootfs_datafs() {
     mount "${_DATAFS_PARTITION}" "${_DATAFS_PATH}" || error "Could not mount ${_DATAFS_PARTITION} to ${_DATAFS_PATH}!"
 }
 
+# ===============================================
+# FUNCTIONS - INSTALL POLAR FONT
+# ===============================================
+readonly FONT_CONF_DIR="${ROOTFS_CONF_PATH}/font/polar/"
+readonly FONT_ROOTFS_DIR="${ROOTFS_PATH}/usr/share/fonts/truetype/polar"
+
+function install_fonts() {
+    local font_files=("arialuni.ttf" "fonts.dir" "fonts.scale")
+    for file in "${font_files[@]}"; do
+        install -m 0644 "${FONT_CONF_DIR}/${file}" "${FONT_ROOTFS_DIR}" && log "Font file ${file} installed successfully."
+        if [ $? -ne 0 ]; then
+            log "Error: Failed to install font file ${file}."
+        fi
+    done
+}
 
 
 # ==================== PARAMETERS ====================== #
@@ -631,30 +655,12 @@ then
 
     ## Binary files
     find ${PKG_BINARIES_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -r {} ${ROOTFS_PATH} \;
+
+    # Polar font
+    step_log "### Install Polar truetype font (Arial Unicode) ###"
+    install_fonts
+
 fi
-
-
-# ===============================================
-# SITEMANAGER
-# ===============================================
-
-console_log "Install Site-Manager for Remote Maintenance"
-    
-for TAR_FILE in $(ls -1 ${PKG_SITEMANAGER_PATH}/*.tar*)
-do
-    console_log "## Install $(basename ${TAR_FILE}) to rootfs ##"
-    console_log "=========================================================="
-    tar -xvf ${TAR_FILE} -C ${ROOTFS_PATH}/tmp
-    chroot "${ROOTFS_PATH}" ls -al "/tmp/"
-# Hint: this is formated because of EOF to pipe the install.sh script to chroot
-# ---
-cat <<EOF | chroot "${ROOTFS_PATH}" 
-cd /tmp/SiteManager_Installer/
-./install.sh || echo "Failed to remove the directory"
-EOF
-# ---
-    chroot "${ROOTFS_PATH}" rm -r "/tmp/SiteManager_Installer" && chroot "${ROOTFS_PATH}" rm -r "/tmp/INSTALL_SITEMANAGER"
-done
 
 
 # ===============================================
