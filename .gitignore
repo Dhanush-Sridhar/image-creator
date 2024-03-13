@@ -1,4 +1,5 @@
 rootfs/
+tmp/
 
 # artefacts
 packages/binaries
@@ -12,3 +13,7 @@ rootfs*.tar.*
 *.bin
 *.bak
 *.deb
+
+# IDE
+.vscode
+.idea

@@ -1,123 +1,11 @@
 #!/bin/bash
 
-# ===============================================
-# Image Creator Script
-# ===============================================
-# This script uses debootstrap to creates an
-# installer whichs wipes and fromats the SSD on
-# /dev/sda and installs the system.
-#
-# Debootstrap uses the host OS; thus the script
-# used to be run on a Ubuntu-based machine.
-#
-# Further Information:
-# https://wiki.ubuntuusers.de/Installation_mit_debootstrap/
-# ===============================================
-
 # allows tracing output separated from error messages
 [ ! -z "${DEBUG}" ] && set -x
 
+CONFIG_FILE=$(dirname "$0")/build.conf
+source $CONFIG_FILE && echo "$CONFIG_FILE was sourced!" || echo "Failed to source config: $CONFIG_FILE"
 
-# Machines Serial Number for Sitemanager / WiMotion Identification
-IMAGE_HOSTNAME="nprohd-cutter"
-
-
-# ===============================================
-# WORK / SCRIPT PATH
-# ===============================================
-SCRIPT_PATH="$(dirname $(readlink -f $0))"
-WORK_PATH="$PWD"
-
-# ===============================================
-# DEBOOTSTRAP (DEFAULTS)
-# ===============================================
-APT_CMD="apt"
-ARCH="amd64"
-DISTRO="focal"
-DEBOOTSTRAP_OPTIONS=""
-
-# ===============================================
-# FILE PATHS
-# ===============================================
-INSTALLER_SCRIPT="${WORK_PATH}/image-installer.sh"
-ROOTFS_IMAGE_FILE="${WORK_PATH}/rootfs.img"
-ROOTFS_TARBALL="${WORK_PATH}/rootfs.tar.bz2"
-ROOTFS_PATH="${WORK_PATH}/rootfs"
-DATAFS_PATH="${WORK_PATH}/rootfs/data"
-
-# ===============================================
-# CONF PATHS
-# ===============================================
-ROOTFS_CONF_PATH="${WORK_PATH}/confs/system"
-APP_CONF_PATH="${WORK_PATH}/confs/app"
-PERMISSIONS_CONF="${ROOTFS_CONF_PATH}/permissions.conf"
-
-
-# ===============================================
-# PACKAGE PATHS
-# ===============================================
-PKG_DEB_PATH="${WORK_PATH}/packages/deb"                     # copy <HMI>.deb here
-PKG_TARBALLS_PATH="${WORK_PATH}/packages/tarballs"
-PKG_BINARIES_PATH="${WORK_PATH}/packages/binaries"
-PKG_DRIVER_PATH="${WORK_PATH}/packages/drivers/"
-
-# ===============================================
-# IMAGE CONFIGS (DEFAULTS)
-# ===============================================
-IMAGE_USER="polar"
-IMAGE_PASSWORD="evis32"
-MACHINE_TYPE_PLACEHOLDER="PACE"
-VNC_PASSWORD="${IMAGE_PASSWORD}"
-#IMAGE_HOSTNAME="pcm-cutter-12345"
-#QT_VERSION="5.15.0"
-
-# ===============================================
-# OPTIONS (DEFAULT)
-# ===============================================
-CLEAN="NO"
-INSTALL_QT="NO"
-INSTALL_WIFI="NO"
-ENTER_CHROOT="NO"
-IMAGE_TYPE="production"
-IMAGE_TARGET="installer"
-MACHINE="nprohd"
-
-# ===============================================
-# PACKAGE LISTS
-# ===============================================
-PKG_BASE_IMAGE="sudo apt-utils"
-PKG_RUNTIME_IMAGE="less wget vim ssh linux-image-generic nodm xinit openbox xterm \
-    network-manager x11-xserver-utils libmbedtls12 apt-offline psmisc dosfstools lsscsi \
-    x11vnc vsftpd libxcb-* libxkbcommon-x11-0 htop nano usbutils unzip lshw lsof \
-    ffmpeg libglu1-mesa libpcre2-16-0"
-PKG_DEVELOP="git xvfb flex bison libxcursor-dev libxcomposite-dev build-essential \
-    libssl-dev libxcb1-dev libgl1-mesa-dev libmbedtls-dev"
-PKG_BUILD="dpkg-dev dh-make devscripts git-buildpackage quilt make dkms" #linux-headers-generic
-PKG_INSTALLATION_IMAGE="gdisk"
-PKG_BLUETOOTH="bluez"
-PKG_NETWORK="net-tools nmap tcpdump ethtool netdiscover w3m"
-PKG_TIME_SERVER="chrony"
-
-PKG_WEBVIEW_PACKAGES="libnss3 libevent-dev libopus-dev libvpx6 libwebp-dev libssl-dev \
-    libxcursor-dev libxcomposite-dev libxdamage-dev libxrandr-dev libfontconfig1-dev libxss-dev \
-    libwebp-dev libjsoncpp-dev libopus-dev libminizip-dev libavutil-dev libavformat-dev \
-    libavcodec-dev libevent-dev libvpx-dev libsnappy-dev libre2-dev libprotobuf-dev protobuf-compiler \
-    libnss3-dev libpci-dev libpulse-dev libudev-dev libxtst-dev \
-    nodejs gyp ninja-build bison build-essential gperf flex python2 \
-    libasound2-dev libcups2-dev libdrm-dev libegl1-mesa-dev"
-    # TODO: remove unused packages later
-
-# install qt
-#QT_SHORT_VERSION="$(echo ${QT_VERSION%.*} | tr -d '.')"
-#QT_IMAGE_PACKAGES="qt${QT_SHORT_VERSION}declarative qt${QT_SHORT_VERSION}quickcontrols2 qt${QT_SHORT_VERSION}graphicaleffects qt${QT_SHORT_VERSION}svg qt${QT_SHORT_VERSION}serialport"
-
-
-# ===============================================
-# OPTION LIST
-# ===============================================
-ARCH_LIST="i386 amd64 armel armhf"
-IMAGE_TYPE_LIST="production development installation"
-MACHINE_LIST="nprohd pure nplus"
 
 # ==================== FUNCTIONS ====================== #
 
@@ -326,6 +214,11 @@ do
             ;;
         --image-type)
             IMAGE_TYPE="$2"
+            shift
+            shift
+            ;;
+        --machine)
+            MACHINE="$2"
             shift
             shift
             ;;
@@ -838,7 +731,7 @@ then
 
     if [ "${IMAGE_TARGET_TYPE}" = "installer" -o "${IMAGE_TYPE}" = "installation" ]
     then
-        INSTALLER_BINARY="${WORK_PATH}/${IMAGE_TYPE}-image-installer_$(date '+%Y-%m-%d_%H-%M-%S').bin"
+        #INSTALLER_BINARY="${WORK_PATH}/${IMAGE_TYPE}-image-installer_$(date '+%Y-%m-%d_%H-%M-%S').bin"
         cat "${INSTALLER_SCRIPT}" "${ROOTFS_TARBALL}" > "${INSTALLER_BINARY}"
         chmod +x "${INSTALLER_BINARY}"
         chgrp $SUDO_GID "${INSTALLER_BINARY}"
