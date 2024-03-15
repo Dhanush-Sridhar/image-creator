@@ -3,9 +3,11 @@
 # allows tracing output separated from error messages
 [ ! -z "${DEBUG}" ] && set -x
 
-CONFIG_FILE=$(dirname "$0")/build.conf
-source $CONFIG_FILE && echo "$CONFIG_FILE was sourced!" || echo "Failed to source config: $CONFIG_FILE"
+BUILD_CONFIG=$(dirname "$0")/build.conf
+source $BUILD_CONFIG && echo "$BUILD_CONFIG was sourced!" || echo "Failed to source config: $BUILD_CONFIG"
 
+IMAGE_CONFIG=$(dirname "$0")/image.conf
+source $IMAGE_CONFIG && echo "$IMAGE_CONFIG was sourced!" || echo "Failed to source config: $IMAGE_CONFIG"
 
 # ==================== FUNCTIONS ====================== #
 
