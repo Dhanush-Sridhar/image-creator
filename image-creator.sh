@@ -170,7 +170,7 @@ readonly FONT_CONF_DIR="${ROOTFS_CONF_PATH}/font/polar/"
 readonly FONT_ROOTFS_DIR="${ROOTFS_PATH}/usr/share/fonts/truetype/polar"
 
 function install_fonts() {
-    mkdir -p ${ROOTFS_PATH}/${FONT_ROOTFS_DIR}
+    mkdir -p ${FONT_ROOTFS_DIR}
     local font_files=("arialuni.ttf" "fonts.dir" "fonts.scale")
     for file in "${font_files[@]}"; do
         install -m 0644 "${FONT_CONF_DIR}/${file}" "${FONT_ROOTFS_DIR}/${file}" && console_log "Font file ${file} installed successfully."
@@ -327,7 +327,7 @@ then
     case ${IMAGE_TARGET} in
         loop)
             IMAGE_TARGET_TYPE="loop"
-            [ "${CLEAN}" = "YES" ] && rm -f "${WORK_PATH}/"*.img
+            [ "${CLEAN}" = "YES" ] && rm -f "${TMP_PATH}/"*.img
             ;;
         *dev*)
             IMAGE_TARGET_TYPE="dev"
@@ -337,15 +337,15 @@ then
             ;;
         tarball)
             IMAGE_TARGET_TYPE="tarball"
-            [ "${CLEAN}" = "YES" ] && rm -f "${WORK_PATH}/"*.tar.*
+            [ "${CLEAN}" = "YES" ] && rm -f "${TMP_PATH}/"*.tar.*
             ;;
         installer)
             IMAGE_TARGET_TYPE="installer"
-            [ "${CLEAN}" = "YES" ] && rm -f "${WORK_PATH}/"*.tar.* "${WORK_PATH}/"*.bin
+            [ "${CLEAN}" = "YES" ] && rm -f "${TMP_PATH}/"*.tar.* "${TMP_PATH}/"*.bin
             ;;
         none)
             IMAGE_TARGET_TYPE="none"
-            [ "${CLEAN}" = "YES" ] && rm -f "${WORK_PATH}/"*.tar.* "${WORK_PATH}/"*.bin "${WORK_PATH}/"*.img
+            [ "${CLEAN}" = "YES" ] && rm -f "${TMP_PATH}/"*.tar.* "${TMP_PATH}/"*.bin "${TMP_PATH}/"*.img
             ##echo $SUDO_USER
             exit 0
             ;;
@@ -457,13 +457,11 @@ console_log "=========================================================="
 if [ "${DISTRO_ID}" = "ubuntu" ]; then
     TMP_REPOS="${DISTRO} ${DISTRO}-updates ${DISTRO}-security ${DISTRO}-backports"
     if [ "${ARCH}" = "armel" -a "${ARCH}" = "armhf" ]; then
-        REPO_URL="http://ports.ubuntu.com"
+        REPO_URL=${REPO_URL_ARM}
     else
-        REPO_URL="http://de.archive.ubuntu.com/ubuntu"
+        REPO_URL=${REPO_URL_BASE}
     fi
     
-    REPO_COMPONENTS="main universe multiverse"
-
     echo "" > "${ROOTFS_PATH}/etc/apt/sources.list"
 
     for REPO in ${TMP_REPOS}
@@ -515,16 +513,14 @@ chroot ${ROOTFS_PATH} ${APT_CMD} -y clean
 console_log "=========================================================="
 console_log "### Install local packages to the rootfs ###"
 console_log "=========================================================="
-if [ "${IMAGE_TYPE}" != "installation" ]
-then
+if [ "${IMAGE_TYPE}" != "installation" ]; then
     #################### Qt 5.15.0 by Stephan Binner ###########################
-    if [ ${INSTALL_QT} = "YES" ]
-    then
+    if [ ${INSTALL_QT} = "YES" ]; then
         ## Tarball packages
         for TAR_FILE in $(ls -1 ${PKG_TARBALLS_PATH}/*.tar*)
         do  
             console_log "## Install $(basename ${TAR_FILE}) to rootfs ##"
-            console_log "=========================================================="
+            console_log ""
             tar -xf ${TAR_FILE} -C ${ROOTFS_PATH}
         done
     fi
@@ -534,8 +530,8 @@ then
     mount -o bind "${PKG_DEB_PATH}" "${ROOTFS_PATH}/mnt"
     for DEB_FILE in $(ls -1 ${PKG_DEB_PATH}/*.deb)
     do
-        console_log "## Install $(basename ${DEB_FILE}) to rootfs ##"
-        console_log "=========================================================="
+        console_log "-- Install $(basename ${DEB_FILE}) to rootfs ##"
+        console_log ""
         chroot "${ROOTFS_PATH}" dpkg -i "/mnt/$(basename ${DEB_FILE})"
     done
     umount "${ROOTFS_PATH}/mnt"
