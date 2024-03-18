@@ -13,33 +13,9 @@ xset -dpms
 
 killall x11vnc
 killall pds_cutter
+killall ehmi_pm
 
 x11vnc -wait 50 -noxdamage -display :0 -forever -o /var/log/x11vnc.log -bg -viewonly -usepw
-
-# automount usb-pendrive for ftp
-
-## Version 1:
-#mkdir -p /home/ftpuser/ftp
-#chown nobody:nogroup /home/ftpuser/ftp
-#chmod a-w /home/ftpuser/ftp
-#mkdir /home/ftpuser/ftp/files
-#chown ftpuser:ftpuser /home/ftpuser/ftp/files
-
-## version2:
-# mkdir -p ${HOME}/ftp/
-# chown nobody:nogroup ${HOME}/ftp
-# chmod a-w ${HOME}/ftp
-# mkdir -p ${HOME}/ftp/upload
-# chown BoxPC:BoxPC /home/ftpuser/ftp/files
-# chown ftpuser:ftpuser /home/ftpuser/ftp/files
-# chmod 700 ${HOME}/ftp/upload
-
-## Version 3:
-mkdir -p /home/BoxPC/ftp
-#chown nobody:nogroup /home/BoxPC/ftp
-#chmod a-w /home/BoxPC/ftp
-#mkdir /home/ftpuser/ftp/upload
-#chown ftpuser:ftpuser /home/BoxPC/ftp/upload
 
 mountpoint -q ${HOME}/BoxPC/ftp || sudo mount --bind /mnt ${HOME}/ftp
 
@@ -47,12 +23,12 @@ mountpoint -q ${HOME}/BoxPC/ftp || sudo mount --bind /mnt ${HOME}/ftp
 if [ -e "/opt/starthmi.sh" ]
 then
 	## script should be installed with the application package
-    /opt/starthmi.sh
+    /pm-app/starthmi.sh
 else
 	## old style may not successful if library path is no set properly
-	if [ -e "/opt/pds-cutter/pds_cutter" ]
-	then
-		PLC_IP=192.168.1.121 /opt/pds-cutter/pds_cutter 2>&1 | systemd-cat -t pds-cutter
+	if [ -e "/opt/pds-cutter/pds_cutter" ]; then
+		export LD_LIBRARY_PATH=/opt/qt5-15-15 && export QT_PLUGIN_PATH=/opt/qt5-15-15/plugins && /pm-app/e-hmi/bin/ehmi_pm 2>&1 | systemd-cat -t ehmi_pm
+		/pm-app/e-hmi/bin/pds_cutter 2>&1 | systemd-cat -t pds-cutter
 	else
 		/usr/bin/xterm
 	fi
