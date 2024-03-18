@@ -9,6 +9,7 @@ source $BUILD_CONFIG && echo "$BUILD_CONFIG was sourced!" || echo "Failed to sou
 IMAGE_CONFIG=$(dirname "$0")/image.conf
 source $IMAGE_CONFIG && echo "$IMAGE_CONFIG was sourced!" || echo "Failed to source config: $IMAGE_CONFIG"
 
+export DEBIAN_FRONTEND=noninteractive
 
 # ===============================================
 # FUNCTIONS - ABOUT / USAGE
@@ -391,7 +392,7 @@ sudo -u $SUDO_USER mkdir -p "${PKG_DEB_PATH}" "${PKG_TARBALLS_PATH}" "${PKG_BINA
 
 # ====================== MAIN ======================== #
 
-export DEBIAN_FRONTEND=noninteractive
+
 
 print_env
 
@@ -443,7 +444,7 @@ if [ ! -e "${ROOTFS_PATH}/etc/os-release" ]; then
         HOSTNAME=${IMAGE_HOSTNAME} ${DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH} --include "${PKG_BASE_IMAGE}"
     fi
 fi
-DISTRO_ID="$(source rootfs/etc/os-release && echo $ID)"
+DISTRO_ID="$(source ${TMP_PATH}/rootfs/etc/os-release && echo $ID)"
 
 mount_dev_sys_proc "${ROOTFS_PATH}"
 
@@ -457,11 +458,11 @@ console_log "=========================================================="
 if [ "${DISTRO_ID}" = "ubuntu" ]; then
     TMP_REPOS="${DISTRO} ${DISTRO}-updates ${DISTRO}-security ${DISTRO}-backports"
     if [ "${ARCH}" = "armel" -a "${ARCH}" = "armhf" ]; then
-        REPO_URL=${REPO_URL_ARM}
+        REPO_URL = ${REPO_URL_ARM}
     else
-        REPO_URL=${REPO_URL_BASE}
+        REPO_URL = ${REPO_URL_BASE}
     fi
-    
+
     echo "" > "${ROOTFS_PATH}/etc/apt/sources.list"
 
     for REPO in ${TMP_REPOS}
@@ -530,8 +531,8 @@ if [ "${IMAGE_TYPE}" != "installation" ]; then
     mount -o bind "${PKG_DEB_PATH}" "${ROOTFS_PATH}/mnt"
     for DEB_FILE in $(ls -1 ${PKG_DEB_PATH}/*.deb)
     do
-        console_log "-- Install $(basename ${DEB_FILE}) to rootfs ##"
         console_log ""
+        console_log "-- Install $(basename ${DEB_FILE}) to rootfs ##"
         chroot "${ROOTFS_PATH}" dpkg -i "/mnt/$(basename ${DEB_FILE})"
     done
     umount "${ROOTFS_PATH}/mnt"
