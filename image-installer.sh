@@ -2,10 +2,7 @@
 
 echo ""
 echo "############################################"
-echo "# Ubuntu image installer                   #"
-echo "# -----------------------------------------#"
-echo "# Author: Benjamin Federau                 #"
-echo "#         <benjamin.federau@basyskom.com>  #"
+echo "# Polar OS Image Installer                 #"
 echo "############################################"
 echo ""
 
@@ -36,6 +33,12 @@ function console_log() {
     echo "$1"
 }
 
+function step_log() {
+    echo "======================================="
+    echo "$1"
+    echo "======================================="
+}
+
 function error() {
     echo "$1"
     exit 1
@@ -43,7 +46,7 @@ function error() {
 
 function mount_dev_sys_proc() {
     local _ROOTFS_PATH="$1"
-    console_log "### Mount dev, proc, sys to rootfs ###"
+    step_log "### Mount dev, proc, sys to rootfs ###"
     [ -e "${_ROOTFS_PATH}" ] || error "Path ${_ROOTFS_PATH} not found!"
     mount -o bind /dev "${_ROOTFS_PATH}/dev"
     mount -o bind /dev/pts "${_ROOTFS_PATH}/dev/pts"
@@ -53,7 +56,7 @@ function mount_dev_sys_proc() {
 
 function umount_dev_sys_proc() {
     local _ROOTFS_PATH="$1"
-    console_log "### Unmount dev, proc, sys from rootfs ###"
+    step_log "### Unmount dev, proc, sys from rootfs ###"
     [ -e "${_ROOTFS_PATH}" ] || error "Path ${_ROOTFS_PATH} not found!"
     umount "${_ROOTFS_PATH}/dev/pts"
     umount "${_ROOTFS_PATH}/dev"
@@ -67,7 +70,7 @@ function create_partitions() {
     local _ROOTFS_PARTITION="$3"
     local _DATAFS_PARTITION="$4"
 
-    console_log "### Create partitions for ${_IMAGE_TARGET} ###"
+    step_log "### Create partitions for ${_IMAGE_TARGET} ###"
     sgdisk -Z ${_IMAGE_TARGET}
 
     # boot partition
@@ -143,7 +146,7 @@ mount "${ROOTFS_PARTITION}" "${ROOTFS_PATH}" || error "Could not mount ${ROOTFS_
 mkdir -p "${DATAFS_PATH}"
 mount "${DATAFS_PARTITION}" "${DATAFS_PATH}" || error "Could not mount ${DATAFS_PARTITION} to ${DATAFS_PATH}!"
 
-console_log "### Installing RootFS to Internal Flash ###"
+step_log "### Installing RootFS to Internal Flash ###"
 # determine the line number of this script where the payload begins
 PAYLOAD_LINE=`awk '/^__PAYLOAD__/ {print NR + 1; exit 0; }' $0`
 
@@ -154,7 +157,7 @@ tail -n+$PAYLOAD_LINE $0 | tar xjv -C "${ROOTFS_PATH}/"
 mount_dev_sys_proc "${ROOTFS_PATH}"
 
 echo "### Configuring RootFS on Internal Flash ###"
-console_log "## Install fstab ##"
+step_log "## Install fstab ##"
 UUID_ROOTFS=$(/bin/lsblk -o UUID -n ${ROOTFS_PARTITION})
 UUID_DATAFS=$(/bin/lsblk -o UUID -n ${DATAFS_PARTITION})
 cat <<EOF > ${ROOTFS_PATH}/etc/fstab
@@ -162,7 +165,7 @@ UUID=${UUID_ROOTFS}  /          ext4  errors=remount-ro  0  1
 UUID=${UUID_DATAFS}  /data      vfat  uid=${IMAGE_USER},gid=${IMAGE_USER}  0  2
 EOF
 
-console_log "## Install bootloader ##"
+step_log "## Install bootloader ##"
 chmod -x "${ROOTFS_PATH}/etc/grub.d/30_os-prober"
 chroot "${ROOTFS_PATH}" grub-install --force ${IMAGE_TARGET}
 chroot "${ROOTFS_PATH}" update-grub
