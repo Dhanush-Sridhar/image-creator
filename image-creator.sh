@@ -162,7 +162,7 @@ readonly FONT_ROOTFS_DIR="${ROOTFS_PATH}/usr/share/fonts/truetype/polar"
 function install_fonts() {
     local font_files=("arialuni.ttf" "fonts.dir" "fonts.scale")
     for file in "${font_files[@]}"; do
-        install -m 0644 "${FONT_CONF_DIR}/${file}" "${FONT_ROOTFS_DIR}" && log "Font file ${file} installed successfully."
+        install -m 0644 "${FONT_CONF_DIR}/${file}" "${FONT_ROOTFS_DIR}/${file}" && log "Font file ${file} installed successfully."
         if [ $? -ne 0 ]; then
             log "Error: Failed to install font file ${file}."
         fi
