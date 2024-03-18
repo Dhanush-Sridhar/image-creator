@@ -82,6 +82,15 @@ function error() {
     exit 1
 }
 
+function print_env() {
+    echo "Image-Creator v$VERSION"
+    echo "Architecture: ${ARCH}"
+    echo "Distro: ${DISTRO}"
+    echo "Image Type: ${IMAGE_TYPE}"
+    echo "Image Target: ${IMAGE_TARGET}"
+}
+
+
 # ===============================================
 # FUNCTIONS - MOUNT /DEV /SYS /PROC
 # ===============================================
@@ -382,26 +391,13 @@ sudo -u $SUDO_USER mkdir -p "${PKG_DEB_PATH}" "${PKG_TARBALLS_PATH}" "${PKG_BINA
 
 export DEBIAN_FRONTEND=noninteractive
 
-console_log "====================================================="
-console_log "#   Image-Creator v1.0                              #"
-console_log "#                                                   #"
-console_log "#   Building an installer/image with ...            #"
-console_log "#   ${ARCH}                                         #"
-console_log "#   ${DISTRO}                                       #"
-console_log "#   ${IMAGE_TYPE}                                   #"
-console_log "#   ${IMAGE_TARGET}                                 #"
-console_log "#                                                   #"
-console_log "====================================================="
-
-
+print_env
 
 # ===============================================
 # IMAGE-TARGET: LOOP
 # ===============================================
-if [ "${IMAGE_TARGET_TYPE}" = "loop" ]
-then
-    if [ ! -e "${ROOTFS_IMAGE_FILE}" ]
-    then
+if [ "${IMAGE_TARGET_TYPE}" = "loop" ]; then
+    if [ ! -e "${ROOTFS_IMAGE_FILE}" ]; then
         dd if=/dev/zero of="${ROOTFS_IMAGE_FILE}" bs=100M count=160
     fi
 
@@ -422,8 +418,7 @@ fi
 # ===============================================
 # IMAGE-TARGET: DEV
 # ===============================================
-if [ "${IMAGE_TARGET_TYPE}" = "dev" ]
-then
+if [ "${IMAGE_TARGET_TYPE}" = "dev" ]; then
     BOOT_PARTITION="${IMAGE_TARGET}1"
     ROOTFS_PARTITION="${IMAGE_TARGET}2"
     DATAFS_PARTITION="${IMAGE_TARGET}3"
@@ -436,13 +431,11 @@ fi
 # ===============================================
 # create an initial rootfs using debootstrap
 # ===============================================
-if [ ! -e "${ROOTFS_PATH}/etc/os-release" ]
-then
+if [ ! -e "${ROOTFS_PATH}/etc/os-release" ]; then
     console_log "=========================================================="
     console_log "### Create rootfs ### "
     console_log "=========================================================="
-    if [ "${ARCH}" != "i386" -o "${ARCH}" != "amd64" ]
-    then
+    if [ "${ARCH}" != "i386" -o "${ARCH}" != "amd64" ]; then
         HOSTNAME=${IMAGE_HOSTNAME} ${QEMU_DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH} --include "${PKG_BASE_IMAGE}"
     else
         HOSTNAME=${IMAGE_HOSTNAME} ${DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH} --include "${PKG_BASE_IMAGE}"
@@ -459,11 +452,9 @@ console_log "=========================================================="
 console_log "### Create sources.list ###"
 console_log "=========================================================="
 
-if [ "${DISTRO_ID}" = "ubuntu" ]
-then
+if [ "${DISTRO_ID}" = "ubuntu" ]; then
     TMP_REPOS="${DISTRO} ${DISTRO}-updates ${DISTRO}-security ${DISTRO}-backports"
-    if [ "${ARCH}" = "armel" -a "${ARCH}" = "armhf" ]
-    then
+    if [ "${ARCH}" = "armel" -a "${ARCH}" = "armhf" ]; then
         REPO_URL="http://ports.ubuntu.com"
     else
         REPO_URL="http://de.archive.ubuntu.com/ubuntu"
@@ -479,8 +470,7 @@ then
         #echo "deb-src ${REPO_URL} ${REPO} ${REPO_COMPONENTS}" >> "${ROOTFS_PATH}/etc/apt/sources.list"
     done
     
-    if [ "${IMAGE_TYPE}" != "installation" ]
-    then
+    if [ "${IMAGE_TYPE}" != "installation" ]; then
         chroot ${ROOTFS_PATH} ${APT_CMD} update
         chroot ${ROOTFS_PATH} ${APT_CMD} -y install software-properties-common
         #chroot ${ROOTFS_PATH} add-apt-repository -y ppa:beineri/opt-qt-${QT_VERSION}-${DISTRO}
