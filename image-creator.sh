@@ -9,7 +9,6 @@ source $BUILD_CONFIG && echo "$BUILD_CONFIG was sourced!" || echo "Failed to sou
 IMAGE_CONFIG=$(dirname "$0")/image.conf
 source $IMAGE_CONFIG && echo "$IMAGE_CONFIG was sourced!" || echo "Failed to source config: $IMAGE_CONFIG"
 
-# ==================== FUNCTIONS ====================== #
 
 # ===============================================
 # FUNCTIONS - ABOUT / USAGE
@@ -74,7 +73,9 @@ function console_log() {
 }
 
 function step_log() {
+    echo "======================================="
     echo "$1"
+    echo "======================================="
 }
 
 function error() {
@@ -169,11 +170,12 @@ readonly FONT_CONF_DIR="${ROOTFS_CONF_PATH}/font/polar/"
 readonly FONT_ROOTFS_DIR="${ROOTFS_PATH}/usr/share/fonts/truetype/polar"
 
 function install_fonts() {
+    mkdir -p ${ROOTFS_PATH}/${FONT_ROOTFS_DIR}
     local font_files=("arialuni.ttf" "fonts.dir" "fonts.scale")
     for file in "${font_files[@]}"; do
-        install -m 0644 "${FONT_CONF_DIR}/${file}" "${FONT_ROOTFS_DIR}/${file}" && log "Font file ${file} installed successfully."
+        install -m 0644 "${FONT_CONF_DIR}/${file}" "${FONT_ROOTFS_DIR}/${file}" && console_log "Font file ${file} installed successfully."
         if [ $? -ne 0 ]; then
-            log "Error: Failed to install font file ${file}."
+            console_log "Error: Failed to install font file ${file}."
         fi
     done
 }
@@ -710,25 +712,20 @@ umount_dev_sys_proc "${ROOTFS_PATH}"
 # ===============================================
 # TARBALL / INSTALLER
 # ===============================================
-if [ "${IMAGE_TARGET_TYPE}" = "tarball" -o "${IMAGE_TARGET_TYPE}" = "installer" ]
-then
-    console_log "=========================================================="
-    console_log "### Create rootfs tarball ###"
-    console_log "=========================================================="
+if [ "${IMAGE_TARGET_TYPE}" = "tarball" -o "${IMAGE_TARGET_TYPE}" = "installer" ]; then
+    step_log "### Create rootfs tarball ###"
     pushd "${ROOTFS_PATH}" &> /dev/null
     tar -cjf ${ROOTFS_TARBALL} * || exit 1
     chgrp $SUDO_GID "${ROOTFS_TARBALL}"
     chown $SUDO_USER "${ROOTFS_TARBALL}"
     popd &> /dev/null
 
-    if [ "${IMAGE_TARGET_TYPE}" = "installer" -o "${IMAGE_TYPE}" = "installation" ]
-    then
-        #INSTALLER_BINARY="${WORK_PATH}/${IMAGE_TYPE}-image-installer_$(date '+%Y-%m-%d_%H-%M-%S').bin"
+    if [ "${IMAGE_TARGET_TYPE}" = "installer" -o "${IMAGE_TYPE}" = "installation" ]; then
         cat "${INSTALLER_SCRIPT}" "${ROOTFS_TARBALL}" > "${INSTALLER_BINARY}"
         chmod +x "${INSTALLER_BINARY}"
         chgrp $SUDO_GID "${INSTALLER_BINARY}"
         chown $SUDO_USER "${INSTALLER_BINARY}"
-        sudo -u $SUDO_USER ln -sf "${INSTALLER_BINARY}" "${WORK_PATH}/${IMAGE_TYPE}-image-installer_latest.bin"
+        sudo -u $SUDO_USER ln -sf "${INSTALLER_BINARY}" "${TMP_PATH}/${IMAGE_TYPE}-image-installer_latest.bin"
         ##echo installer done here...
         ##ls -l "${INSTALLER_BINARY}"
     fi
@@ -737,11 +734,9 @@ fi
 # ===============================================
 # IMAGE-TYPE: INSTALLATION
 # ===============================================
-if [ "${IMAGE_TYPE}" = "installation" ]
-then
-    LATEST_INSTALLER_BINARY="$(readlink -f "${WORK_PATH}/${IMAGE_TYPE}-image-installer_latest.bin")"
-    if [ -e "${LATEST_INSTALLER_BINARY}" ]
-    then
+if [ "${IMAGE_TYPE}" = "installation" ]; then
+    LATEST_INSTALLER_BINARY="$(readlink -f "${TMP_PATH}/${IMAGE_TYPE}-image-installer_latest.bin")"
+    if [ -e "${LATEST_INSTALLER_BINARY}" ]; then
         cp ${LATEST_INSTALLER_BINARY} "${ROOTFS_PATH}/home/${IMAGE_USER}/"
     else
         console_log "Image installer binary not found!"
@@ -754,13 +749,11 @@ fi
 # ===============================================
 # IMAGE-TYPE: DEV / LOOP
 # ===============================================
-if [ "${IMAGE_TARGET_TYPE}" = "dev" -o "${IMAGE_TARGET_TYPE}" = "loop" ]
-then
+if [ "${IMAGE_TARGET_TYPE}" = "dev" -o "${IMAGE_TARGET_TYPE}" = "loop" ]; then
     losetup -D
     umount "${DATAFS_PATH}"
     umount "${ROOTFS_PATH}"
 fi
 
-console_log "=========================================================="
-console_log "### DONE! ###"
-console_log "=========================================================="
+step_log "### DONE! ###"
+
