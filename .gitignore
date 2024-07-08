@@ -13,6 +13,7 @@ rootfs*.tar.*
 *.bin
 *.bak
 *.deb
+*.img
 
 # IDE
 .vscode
