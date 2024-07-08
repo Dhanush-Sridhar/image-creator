@@ -1,6 +1,8 @@
 # Image-Creator
 
-Bash-script to create an installer for machine generation "Pure" with Geshem Embedded BoxPC.
+Bash-script to create an binray installer with debootstrap. 
+
+
 It's also possible to create images for non-desktop target platforms. 
 
 For detailed documentation see Bitbucket-Repo: `pm_doc_cutter_v3` 

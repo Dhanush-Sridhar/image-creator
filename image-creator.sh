@@ -439,9 +439,9 @@ if [ ! -e "${ROOTFS_PATH}/etc/os-release" ]; then
     console_log "### Create rootfs ### "
     console_log "=========================================================="
     if [ "${ARCH}" != "i386" -o "${ARCH}" != "amd64" ]; then
-        HOSTNAME=${IMAGE_HOSTNAME} ${QEMU_DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH} --include "${PKG_BASE_IMAGE}"
+        HOSTNAME=${IMAGE_HOSTNAME} ${QEMU_DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH} #--include="${PKG_BASE_IMAGE}"
     else
-        HOSTNAME=${IMAGE_HOSTNAME} ${DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH} --include "${PKG_BASE_IMAGE}"
+        HOSTNAME=${IMAGE_HOSTNAME} ${DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH} #--include="${PKG_BASE_IMAGE}"
     fi
 fi
 DISTRO_ID="$(source ${TMP_PATH}/rootfs/etc/os-release && echo $ID)"
@@ -458,9 +458,11 @@ console_log "=========================================================="
 if [ "${DISTRO_ID}" = "ubuntu" ]; then
     TMP_REPOS="${DISTRO} ${DISTRO}-updates ${DISTRO}-security ${DISTRO}-backports"
     if [ "${ARCH}" = "armel" -a "${ARCH}" = "armhf" ]; then
-        REPO_URL = ${REPO_URL_ARM}
+        REPO_URL="http://de.archive.ubuntu.com/ubuntu"
+        REPO_URL=$REPO_URL_ARM
     else
-        REPO_URL = ${REPO_URL_BASE}
+        REPO_URL=$REPO_URL_X86
+        REPO_URL="http://de.archive.ubuntu.com/ubuntu"
     fi
 
     echo "" > "${ROOTFS_PATH}/etc/apt/sources.list"

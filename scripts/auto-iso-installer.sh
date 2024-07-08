@@ -2,6 +2,13 @@
 
 set -eo pipefail
 
+### TODO:
+# end Kernel panic - not syncing: VFS: Unable to mount root fs on unknown-block(0,0)
+# https://askubuntu.com/questions/41930/kernel-panic-not-syncing-vfs-unable-to-mount-root-fs-on-unknown-block0-0
+
+# kernel and inird option not working
+# 
+
 help()
 {
 cat << EOM
@@ -151,7 +158,7 @@ function clean(){
 
 function test_iso(){
     #qemu-system-x86_64 -enable-kvm -boot menu=on -m 4G -cpu host -smp 2 -curses -cdrom $ISO_NAME
-    qemu-system-x86_64 -boot menu=on -display curses -cdrom $ISO_NAME
+      qemu-system-x86_64 -boot menu=on -display curses -cdrom $ISO_NAME
 }
 
 
