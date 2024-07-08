@@ -109,26 +109,17 @@ function create_rootfs(){
 chroot $ROOTFS_LIVE_DIR /bin/bash <<EOF
 
 apt-get update
-apt-get install -y systemd-sysv 
+apt-get install -y systemd-sysv gdisk
 #apt-get --no-install-recommends install busybox linux-image-amd64 systemd-sysv pciutils usbutils passwd
 
-# Erstellen des auto-install.sh Skripts
-cat <<EOT > /root/$SCRIPT_FILE
-#!/bin/bash
-echo "Auto install script executed" > /root/auto-install.log
 
-# Hier weitere Befehle hinzufügen ...
-EOT
-
-chmod +x /root/$SCRIPT_FILE
-
-# Erstellen des Systemdienstes
+# Systemd service for installing the binary installer automatically
 cat <<EOT > /etc/systemd/system/$SERVICE_NAME
 [Unit]
 Description=Run auto-install script
 
 [Service]
-ExecStart=/root/$SCRIPT_FILE
+ExecStart=/root/production-image-installer_latest.bin
 Type=oneshot
 
 [Install]
@@ -182,9 +173,6 @@ EOF
 grub-mkrescue -o $ISO_NAME $ROOTFS_LIVE_DIR && echo "ISO image $ISO_NAME created successfully." && ln -sf $ISO_NAME $ISO_NAME_LATEST
 }
 
-function make_iso(){
-  echo "NEW TEST";
-}
 
 function clean(){
     ! mountpoint -q $ROOTFS_LIVE_DIR/dev  || umount $ROOTFS_LIVE_DIR/dev
@@ -197,7 +185,9 @@ function clean(){
 function test_iso(){
     #qemu-system-x86_64 -enable-kvm -boot menu=on -m 4G -cpu host -smp 2 -curses -cdrom $ISO_NAME
     #qemu-system-x86_64 -boot menu=on -display curses -cdrom $ISO_NAME
-    qemu-system-x86_64 -enable-kvm -boot menu=on -m 4G -cpu host -smp 2 -vga virtio -display sdl,gl=on -cdrom $ISO_NAME_LATEST
+    if ! test -f $TMP_DIR/geshem.img; then echo "Test Image does not exists. Create one."; qemu-img create -f qcow virt-geshem.img 10G; fi
+
+    qemu-system-x86_64 -enable-kvm -boot menu=on -m 4G -cpu host -smp 2 -vga virtio -display sdl,gl=on -drive file=virt-geshem.img -cdrom $ISO_NAME_LATEST
 }
 
 
@@ -248,6 +238,15 @@ while [[ $# -gt 0 ]]; do
             test_iso
             shift
         ;;
+
+        --all)
+            root_check
+            clean
+            create_rootfs
+            create_iso
+            test_iso
+            shift
+        ;; 
 
         *)
 			echo -e "ERROR: Invalid option: $1 \n"
