@@ -18,24 +18,32 @@ Usage:
   ./build [--options]
 
 Options:
-  -h, --help    	Show this help message.
-  --init-host       Install dependencies on host
-  --build           Build rootfs and iso file.
+  -h, --help    	  Show this help message.
+  --init            Install dependencies on host
+  --rootfs           Build rootfs and iso file.
+  --mkrootfs        Create root file system.
+  --mkiso           Generate the iso.
   --kernel          Path to custom kernel.
   --initrd          Path to custom Initial RamDisk.
-  --clean	        Delete rootfs.
+  --clean	          Delete rootfs.
+  --test            Test the ISO with qemu.
+  --all             Build rootfs, iso and run qemu test.
+
 
 Know issues:
-- stop at 'Chosen extractor for .deb packages: ar' - delete rootfs (--clean) 
+- stop at 'Chosen extractor for .deb packages: ar' - delete rootfs ==> use --clean
+- stop with 'tried to extract package, but file already exists. Exit.' ==> use --clean
 EOM
 }
 
 readonly REPO_ROOT=$(git rev-parse --show-toplevel) 
 readonly TMP_DIR="${REPO_ROOT}/tmp"
 
-readonly ROOTFS_DIR="$TMP_DIR/live-rootfs"
-readonly ISO_NAME="$TMP_DIR/polar-live.iso"
-readonly BINARY_FILE="$TMP_DIR/production-installer.bin"
+readonly ROOTFS_LIVE_DIR="$TMP_DIR/live-rootfs"
+readonly ISO_NAME="$TMP_DIR/polar-live-$(date +"%Y%m%d").iso"
+readonly ISO_NAME_LATEST="$TMP_DIR/polar-live-latest.iso"
+
+readonly BINARY_FILE="$TMP_DIR/production-image-installer_latest.bin"
 readonly SCRIPT_FILE="auto-install.sh"
 readonly SERVICE_NAME="auto-install.service"
 
@@ -43,17 +51,18 @@ readonly ARCH=amd64
 readonly DISTRO=jammy
 readonly REPO="http://archive.ubuntu.com/ubuntu/"
 
-readonly ROOTFS_PACKAGES="busybox linux-image-amd64 systemd-sysv pciutils usbutils passwd exfat-fuse exfat-utils"
+#readonly ROOTFS_PACKAGES="busybox linux-image-amd64 systemd-sysv pciutils usbutils passwd exfat-fuse exfat-utils"
 
-VMLINUZ="vmlinuz-6.9.3-76060903-generic"
-INITRD="initrd.img-6.9.3-76060903-generic"
+VMLINUZ=$TMP_DIR/rootfs/boot/vmlinuz
+INITRD=$TMP_DIR/rootfs/boot/initrd.img
 
-# Run with sudo check
-if [ "$EUID" -ne 0 ]; then
-  echo "Please run as root"
-  exit
-fi
 
+function root_check(){
+    if [ "$EUID" -ne 0 ]; then
+    echo "Please run as root"
+    exit
+    fi
+}
 
 function get_kernel(){
     echo "Use custom kernel ..."
@@ -66,24 +75,38 @@ function get_initrd(){
 }
 
 # Install dependecies on host
+function check_host_setup(){
+
+  if [ ! $(command -v mksquashfs) ]; then
+  	echo "ERROR: mksquashfs not found. Run --init first! "
+  	exit 1
+  fi
+
+  if [ ! $(command -v xorriso) ]; then
+  	echo "ERROR: xorriso not found! Run --init first!"
+  	exit 1
+  fi
+
+}
+
 function host_setup(){
-apt-get update
-apt-get install -y debootstrap grub-pc-bin grub-efi-amd64-bin mtools xorriso
+  apt-get update
+  apt-get install -y debootstrap grub-pc-bin grub-efi-amd64-bin mtools xorriso
 }
 
 function create_rootfs(){
 
-    mkdir -p $ROOTFS_DIR
+    mkdir -p $ROOTFS_LIVE_DIR
 
-    debootstrap --arch=$ARCH $DISTRO $ROOTFS_DIR $REPO
+    debootstrap --variant=minbase --arch=$ARCH $DISTRO $ROOTFS_LIVE_DIR $REPO
 
     # Mount virtual filesystems
-    mount --bind /dev $ROOTFS_DIR/dev
-    mount --bind /proc $ROOTFS_DIR/proc
-    mount --bind /sys $ROOTFS_DIR/sys
+    mount --bind /dev $ROOTFS_LIVE_DIR/dev
+    mount --bind /proc $ROOTFS_LIVE_DIR/proc
+    mount --bind /sys $ROOTFS_LIVE_DIR/sys
 
 # Configure rootfs
-chroot $ROOTFS_DIR /bin/bash <<EOF
+chroot $ROOTFS_LIVE_DIR /bin/bash <<EOF
 
 apt-get update
 apt-get install -y systemd-sysv 
@@ -115,27 +138,38 @@ EOT
 systemctl enable $SERVICE_NAME
 EOF
 
+# Auto-Login einrichten
+mkdir -p /etc/systemd/system/getty@tty1.service.d
+cat <<EOT > /etc/systemd/system/getty@tty1.service.d/autologin.conf
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty -o '-p -f -- \\u' --noclear --autologin root %I $TERM
+EOT
+
 # Copy binary installer into rootfs
-cp -v $BINARY_FILE $ROOTFS_DIR/root/
+cp -v $BINARY_FILE $ROOTFS_LIVE_DIR/root/
 
 # Unmount virtual filesystems
-    ! mountpoint -q $ROOTFS_DIR/dev || umount $ROOTFS_DIR/dev
-    ! mountpoint -q $ROOTFS_DIR/proc || umount $ROOTFS_DIR/proc
-    ! mountpoint -q $ROOTFS_DIR/sys || umount $ROOTFS_DIR/sys
+    ! mountpoint -q $ROOTFS_LIVE_DIR/dev || umount $ROOTFS_LIVE_DIR/dev
+    ! mountpoint -q $ROOTFS_LIVE_DIR/proc || umount $ROOTFS_LIVE_DIR/proc
+    ! mountpoint -q $ROOTFS_LIVE_DIR/sys || umount $ROOTFS_LIVE_DIR/sys
 }
 
 function create_iso(){
 
-    mkdir -p $ROOTFS_DIR/boot/grub
+    if !exist $ROOTFS; then 
+        echo "ERROR: RootFS does not exists. Run --rootfs first." && exit 1
+    fi
 
-    echo "Copy kernel ..." && cp -v /boot/$VMLINUZ $ROOTFS_DIR/boot/vmlinuz
-    #cp -v $ROOTFS_DIR/boot/vmlinuz-* $TMP_DIR/iso/boot/vmlinuz
+    mkdir -p $ROOTFS_LIVE_DIR/boot/grub
 
-    echo "Copy Initrd ..." && cp -v /boot/$INITRD $ROOTFS_DIR/boot/initrd
-    #cp -v $ROOTFS_DIR/boot/initrd.img-* $TMP_DIR/iso/boot/initrd
-    
+    echo "Copy kernel ..." && cp -v $VMLINUZ $ROOTFS_LIVE_DIR/boot/vmlinuz
+    #cp -v $ROOTFS_LIVE_DIR/boot/vmlinuz-* $TMP_DIR/iso/boot/vmlinuz
 
-cat <<EOF > $ROOTFS_DIR/boot/grub/grub.cfg
+    echo "Copy Initrd ..." && cp -v $INITRD $ROOTFS_LIVE_DIR/boot/initrd
+    #cp -v $ROOTFS_LIVE_DIR/boot/initrd.img-* $TMP_DIR/iso/boot/initrd
+
+cat <<EOF > $ROOTFS_LIVE_DIR/boot/grub/grub.cfg
 set default=0
 set timeout=5
 
@@ -145,22 +179,26 @@ menuentry "Install PolarOS" {
 }
 EOF
 
-grub-mkrescue -o $ISO_NAME $ROOTFS_DIR && echo "ISO image $ISO_NAME created successfully."
+grub-mkrescue -o $ISO_NAME $ROOTFS_LIVE_DIR && echo "ISO image $ISO_NAME created successfully." && ln -sf $ISO_NAME $ISO_NAME_LATEST
+}
+
+function make_iso(){
+  echo "NEW TEST";
 }
 
 function clean(){
-    ! mountpoint -q $ROOTFS_DIR/dev || umount $ROOTFS_DIR/dev
-    ! mountpoint -q $ROOTFS_DIR/proc || umount $ROOTFS_DIR/proc
-    ! mountpoint -q $ROOTFS_DIR/sys || umount $ROOTFS_DIR/sys
+    ! mountpoint -q $ROOTFS_LIVE_DIR/dev  || umount $ROOTFS_LIVE_DIR/dev
+    ! mountpoint -q $ROOTFS_LIVE_DIR/proc || umount $ROOTFS_LIVE_DIR/proc
+    ! mountpoint -q $ROOTFS_LIVE_DIR/sys  || umount $ROOTFS_LIVE_DIR/sys
 
-    sudo rm -rvf $ROOTFS_DIR
+    sudo rm -rvf $ROOTFS_LIVE_DIR
 }
 
 function test_iso(){
     #qemu-system-x86_64 -enable-kvm -boot menu=on -m 4G -cpu host -smp 2 -curses -cdrom $ISO_NAME
-      qemu-system-x86_64 -boot menu=on -display curses -cdrom $ISO_NAME
+    #qemu-system-x86_64 -boot menu=on -display curses -cdrom $ISO_NAME
+    qemu-system-x86_64 -enable-kvm -boot menu=on -m 4G -cpu host -smp 2 -vga virtio -display sdl,gl=on -cdrom $ISO_NAME_LATEST
 }
-
 
 
 while [[ $# -gt 0 ]]; do
@@ -172,13 +210,8 @@ while [[ $# -gt 0 ]]; do
             exit 0
         ;;
 
-        --build)
-            create_rootfs
-            create_iso
-            shift
-        ;;
-
-        --init-host)
+        --init)
+            root_check
             host_setup
             shift
         ;;
@@ -193,7 +226,20 @@ while [[ $# -gt 0 ]]; do
             shift
         ;;
 
+        --rootfs)
+            root_check
+            create_rootfs
+    
+            shift
+        ;;
+
+        --iso)
+            create_iso
+            shift
+        ;;
+
         --clean)
+            root_check
             clean
             shift
         ;;
