@@ -3,28 +3,38 @@
 # allows tracing output separated from error messages
 [ ! -z "${DEBUG}" ] && set -x
 
-BUILD_CONFIG=$(dirname "$0")/build.conf
+REPO_ROOT=$(git rev-parse --show-toplevel)
+
+logstep "Load configuration ..."
+BUILD_CONFIG=$REPO_ROOT/config/build.conf
 source $BUILD_CONFIG && echo "$BUILD_CONFIG was sourced!" || echo "Failed to source config: $BUILD_CONFIG"
 
-IMAGE_CONFIG=$(dirname "$0")/image.conf
+IMAGE_CONFIG=$REPO_ROOT/config/image.conf
 source $IMAGE_CONFIG && echo "$IMAGE_CONFIG was sourced!" || echo "Failed to source config: $IMAGE_CONFIG"
+
+VERSION_FILE=$REPO_ROOT/version
+source $VERSION_FILE && echo "$VERSION_FILE was sourced!" || echo "Failed to source config: $VERSION_FILE"
 
 export DEBIAN_FRONTEND=noninteractive
 
 # ===============================================
 # FUNCTIONS - ABOUT / USAGE
 # ===============================================
+
 function about() {
-echo "############################################"
-echo "# Ubuntu image creator                     #"
-echo "# ---------------------------------------- #"
-echo "# Author: Benjamin Federau                 #"
-echo "#         <benjamin.federau@basyskom.com>  #"
-echo "# ---------------------------------------- #"
-echo "# (c) Adolf Mohr Maschinenfabrik           #"
-echo "############################################"
-echo""
+  cat <<EOF
+┌──────────────────────────────────────────────────┐
+│      Polar OS Image Creator                      │
+│ ------------------------------------------------ │
+│ Author:   Benjamin Federau, Suria Reddy          │
+│ Version:  ${VERSION}                                  │
+│ ------------------------------------------------ │
+│ Purpose: Builds a Linux rootfs and installer     │
+│          as base image for Box-PC applications.  │
+└──────────────────────────────────────────────────┘
+EOF
 }
+
 
 function usage() {
     echo "Usage: $(basename $0) <options>"
@@ -51,9 +61,11 @@ function usage() {
     echo ""
     echo "  --install-qt :"
     echo "      Installs the Stephan Binner qt version 5.15.0 ubuntu package."
+    echo "      Default: ${INSTALL_QT}"
     echo ""
     echo "  --install-wifi :"
     echo "      Installs Wi-Fi driver for Edimax N150 (EW7811UnV2/EW-7611ULB)"
+    echo "      Default: ${INSTALL_WIFI}"
     echo ""
     echo "  --clean :"
     echo "      Cleans the image-creator environment (rootfs, image files, tarballs, ...)."
@@ -495,7 +507,7 @@ chroot ${ROOTFS_PATH} /bin/bash -c 'DEBIAN_FRONTEND=noninteractive dpkg-reconfig
 console_log "=========================================================="
 console_log "### Update rootfs ###"
 console_log "=========================================================="
-cp /etc/resolv.conf ${ROOTFS_PATH}/etc
+cp -v /etc/resolv.conf ${ROOTFS_PATH}/etc # TODO: error msg
 chroot ${ROOTFS_PATH} ${APT_CMD} update
 POLICY_RC_D_FILE="${ROOTFS_PATH}/usr/sbin/policy-rc.d"
 install -m 0644 ${ROOTFS_CONF_PATH}/policy-rc.d ${POLICY_RC_D_FILE}

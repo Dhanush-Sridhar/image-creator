@@ -2,13 +2,6 @@
 
 set -eo pipefail
 
-### TODO:
-# end Kernel panic - not syncing: VFS: Unable to mount root fs on unknown-block(0,0)
-# https://askubuntu.com/questions/41930/kernel-panic-not-syncing-vfs-unable-to-mount-root-fs-on-unknown-block0-0
-
-# kernel and inird option not working
-# 
-
 help()
 {
 cat << EOM
@@ -44,8 +37,9 @@ readonly ISO_NAME="$TMP_DIR/polar-live-$(date +"%Y%m%d").iso"
 readonly ISO_NAME_LATEST="$TMP_DIR/polar-live-latest.iso"
 
 readonly BINARY_FILE="$TMP_DIR/production-image-installer_latest.bin"
-readonly SCRIPT_FILE="auto-install.sh"
-readonly SERVICE_NAME="auto-install.service"
+
+#readonly SCRIPT_FILE="auto-install.sh"
+#readonly SERVICE_NAME="auto-install.service"
 
 readonly ARCH=amd64
 readonly DISTRO=jammy
@@ -109,12 +103,23 @@ function create_rootfs(){
 chroot $ROOTFS_LIVE_DIR /bin/bash <<EOF
 
 apt-get update
-apt-get install -y systemd-sysv gdisk
+apt-get install -y systemd-sysv gdisk dosfstools pciutils passwd usbutils e2fsprogs vim coreutils
 #apt-get --no-install-recommends install busybox linux-image-amd64 systemd-sysv pciutils usbutils passwd
+EOF
 
+## Auto-Login
+chroot $ROOTFS_LIVE_DIR /bin/bash <<EOF
+mkdir - /etc/systemd/system/getty@tty1.service.d
+cat <<EOT > /etc/systemd/system/getty@tty1.service.d/autologin.conf
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty -o '-p -f -- \\u' --noclear --autologin root %I $TERM
+EOT
+EOF
 
-# Systemd service for installing the binary installer automatically
-cat <<EOT > /etc/systemd/system/$SERVICE_NAME
+## Auto Install Service
+chroot $ROOTFS_LIVE_DIR /bin/bash <<EOF
+cat <<EOT > /etc/systemd/system/auto-install.service
 [Unit]
 Description=Run auto-install script
 
@@ -126,16 +131,9 @@ Type=oneshot
 WantedBy=multi-user.target
 EOT
 
-systemctl enable $SERVICE_NAME
+chmod 0644 /etc/systemd/system/auto-install.service
 EOF
 
-# Auto-Login einrichten
-mkdir -p /etc/systemd/system/getty@tty1.service.d
-cat <<EOT > /etc/systemd/system/getty@tty1.service.d/autologin.conf
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty -o '-p -f -- \\u' --noclear --autologin root %I $TERM
-EOT
 
 # Copy binary installer into rootfs
 cp -v $BINARY_FILE $ROOTFS_LIVE_DIR/root/
@@ -153,12 +151,8 @@ function create_iso(){
     fi
 
     mkdir -p $ROOTFS_LIVE_DIR/boot/grub
-
     echo "Copy kernel ..." && cp -v $VMLINUZ $ROOTFS_LIVE_DIR/boot/vmlinuz
-    #cp -v $ROOTFS_LIVE_DIR/boot/vmlinuz-* $TMP_DIR/iso/boot/vmlinuz
-
     echo "Copy Initrd ..." && cp -v $INITRD $ROOTFS_LIVE_DIR/boot/initrd
-    #cp -v $ROOTFS_LIVE_DIR/boot/initrd.img-* $TMP_DIR/iso/boot/initrd
 
 cat <<EOF > $ROOTFS_LIVE_DIR/boot/grub/grub.cfg
 set default=0
