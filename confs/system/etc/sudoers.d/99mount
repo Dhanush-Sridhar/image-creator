@@ -1,1 +1,0 @@
-polar ALL=(ALL) NOPASSWD: /usr/bin/mount,/usr/bin/umount

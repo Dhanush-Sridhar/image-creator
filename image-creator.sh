@@ -1,139 +1,40 @@
 #!/bin/bash
 
-# ===============================================
-# Image Creator Script
-# ===============================================
-# This script uses debootstrap to creates an
-# installer whichs wipes and fromats the SSD on
-# /dev/sda and installs the system.
-#
-# Debootstrap uses the host OS; thus the script
-# used to be run on a Ubuntu-based machine.
-#
-# Further Information:
-# https://wiki.ubuntuusers.de/Installation_mit_debootstrap/
-# ===============================================
-
 # allows tracing output separated from error messages
 [ ! -z "${DEBUG}" ] && set -x
 
+REPO_ROOT=$(git rev-parse --show-toplevel)
 
-# Machines Serial Number for Sitemanager / WiMotion Identification
-IMAGE_HOSTNAME="pcm-cutter-<machine-id>"
+logstep "Load configuration ..."
+BUILD_CONFIG=$REPO_ROOT/config/build.conf
+source $BUILD_CONFIG && echo "$BUILD_CONFIG was sourced!" || echo "Failed to source config: $BUILD_CONFIG"
 
+IMAGE_CONFIG=$REPO_ROOT/config/image.conf
+source $IMAGE_CONFIG && echo "$IMAGE_CONFIG was sourced!" || echo "Failed to source config: $IMAGE_CONFIG"
 
-# ===============================================
-# WORK / SCRIPT PATH
-# ===============================================
-SCRIPT_PATH="$(dirname $(readlink -f $0))"
-WORK_PATH="$PWD"
+VERSION_FILE=$REPO_ROOT/version
+source $VERSION_FILE && echo "$VERSION_FILE was sourced!" || echo "Failed to source config: $VERSION_FILE"
 
-# ===============================================
-# DEBOOTSTRAP (DEFAULTS)
-# ===============================================
-APT_CMD="apt"
-ARCH="amd64"
-DISTRO="focal"
-DEBOOTSTRAP_OPTIONS=""
-
-# ===============================================
-# FILE PATHS
-# ===============================================
-INSTALLER_SCRIPT="${WORK_PATH}/image-installer.sh"
-ROOTFS_IMAGE_FILE="${WORK_PATH}/rootfs.img"
-ROOTFS_TARBALL="${WORK_PATH}/rootfs.tar.bz2"
-ROOTFS_PATH="${WORK_PATH}/rootfs"
-DATAFS_PATH="${WORK_PATH}/rootfs/data"
-
-# ===============================================
-# CONF PATHS
-# ===============================================
-ROOTFS_CONF_PATH="${WORK_PATH}/confs/system"
-APP_CONF_PATH="${WORK_PATH}/confs/app"
-PERMISSIONS_CONF="${ROOTFS_CONF_PATH}/permissions.conf"
-
-
-# ===============================================
-# PACKAGE PATHS
-# ===============================================
-PKG_DEB_PATH="${WORK_PATH}/packages/deb"                     # copy <HMI>.deb here
-PKG_TARBALLS_PATH="${WORK_PATH}/packages/tarballs"
-PKG_BINARIES_PATH="${WORK_PATH}/packages/binaries"
-PKG_SITEMANAGER_PATH="${WORK_PATH}/packages/sitemanager"     # copy sitemanager tarball here
-PKG_DRIVER_PATH="${WORK_PATH}/packages/drivers/"
-
-# ===============================================
-# IMAGE CONFIGS (DEFAULTS)
-# ===============================================
-IMAGE_USER="polar"
-IMAGE_PASSWORD="evis32"
-MACHINE_TYPE_PLACEHOLDER="PACE"
-VNC_PASSWORD="${IMAGE_PASSWORD}"
-#IMAGE_HOSTNAME="pcm-cutter-12345"
-#QT_VERSION="5.15.0"
-
-# ===============================================
-# OPTIONS (DEFAULT)
-# ===============================================
-CLEAN="NO"
-INSTALL_QT="NO"
-INSTALL_WIFI="NO"
-ENTER_CHROOT="NO"
-IMAGE_TYPE="production"
-IMAGE_TARGET="installer"
-
-# ===============================================
-# PACKAGE LISTS
-# ===============================================
-PKG_BASE_IMAGE="sudo apt-utils"
-PKG_RUNTIME_IMAGE="less wget vim ssh linux-image-generic nodm xinit openbox xterm \
-    network-manager x11-xserver-utils libmbedtls12 apt-offline psmisc dosfstools lsscsi \
-    x11vnc vsftpd libxcb-* libxkbcommon-x11-0 htop nano usbutils unzip lshw lsof neofetch"
-PKG_DEVELOP="git xvfb flex bison libxcursor-dev libxcomposite-dev build-essential \
-    libssl-dev libxcb1-dev libgl1-mesa-dev libmbedtls-dev"
-PKG_BUILD="dpkg-dev dh-make devscripts git-buildpackage quilt make dkms" #linux-headers-generic
-PKG_INSTALLATION_IMAGE="gdisk"
-PKG_BLUETOOTH="bluez"
-PKG_NETWORK="net-tools nmap tcpdump ethtool netdiscover w3m"
-PKG_TIME_SERVER="chrony"
-
-PKG_WEBVIEW_PACKAGES="libnss3 libevent-dev libopus-dev libvpx6 libwebp-dev libssl-dev \
-    libxcursor-dev libxcomposite-dev libxdamage-dev libxrandr-dev libfontconfig1-dev libxss-dev \
-    libwebp-dev libjsoncpp-dev libopus-dev libminizip-dev libavutil-dev libavformat-dev \
-    libavcodec-dev libevent-dev libvpx-dev libsnappy-dev libre2-dev libprotobuf-dev protobuf-compiler \
-    libnss3-dev libpci-dev libpulse-dev libudev-dev libxtst-dev \
-    nodejs gyp ninja-build bison build-essential gperf flex python2 \
-    libasound2-dev libcups2-dev libdrm-dev libegl1-mesa-dev"
-    # TODO: remove unused packages later
-
-# install qt
-#QT_SHORT_VERSION="$(echo ${QT_VERSION%.*} | tr -d '.')"
-#QT_IMAGE_PACKAGES="qt${QT_SHORT_VERSION}declarative qt${QT_SHORT_VERSION}quickcontrols2 qt${QT_SHORT_VERSION}graphicaleffects qt${QT_SHORT_VERSION}svg qt${QT_SHORT_VERSION}serialport"
-
-
-# ===============================================
-# OPTION LIST
-# ===============================================
-ARCH_LIST="i386 amd64 armel armhf"
-IMAGE_TYPE_LIST="production development installation"
-
-
-# ==================== FUNCTIONS ====================== #
+export DEBIAN_FRONTEND=noninteractive
 
 # ===============================================
 # FUNCTIONS - ABOUT / USAGE
 # ===============================================
+
 function about() {
-echo "############################################"
-echo "# Ubuntu image creator                     #"
-echo "# ---------------------------------------- #"
-echo "# Author: Benjamin Federau                 #"
-echo "#         <benjamin.federau@basyskom.com>  #"
-echo "# ---------------------------------------- #"
-echo "# (c) Adolf Mohr Maschinenfabrik           #"
-echo "############################################"
-echo""
+  cat <<EOF
+┌──────────────────────────────────────────────────┐
+│      Polar OS Image Creator                      │
+│ ------------------------------------------------ │
+│ Author:   Benjamin Federau, Suria Reddy          │
+│ Version:  ${VERSION}                                  │
+│ ------------------------------------------------ │
+│ Purpose: Builds a Linux rootfs and installer     │
+│          as base image for Box-PC applications.  │
+└──────────────────────────────────────────────────┘
+EOF
 }
+
 
 function usage() {
     echo "Usage: $(basename $0) <options>"
@@ -154,11 +55,17 @@ function usage() {
     echo "      Specifies the image type. Available image types: ${IMAGE_TYPE_LIST// /, }"
     echo "      Default: ${IMAGE_TYPE}"
     echo ""
+    echo "  --machine <string> :"
+    echo "      Specifies the image type. Available image types: ${MACHINE_LIST// /, }"
+    echo "      Default: ${MACHINE}"
+    echo ""
     echo "  --install-qt :"
     echo "      Installs the Stephan Binner qt version 5.15.0 ubuntu package."
+    echo "      Default: ${INSTALL_QT}"
     echo ""
     echo "  --install-wifi :"
     echo "      Installs Wi-Fi driver for Edimax N150 (EW7811UnV2/EW-7611ULB)"
+    echo "      Default: ${INSTALL_WIFI}"
     echo ""
     echo "  --clean :"
     echo "      Cleans the image-creator environment (rootfs, image files, tarballs, ...)."
@@ -178,10 +85,25 @@ function console_log() {
     echo "$1"
 }
 
+function step_log() {
+    echo "======================================="
+    echo "$1"
+    echo "======================================="
+}
+
 function error() {
     echo "$1"
     exit 1
 }
+
+function print_env() {
+    echo "Image-Creator v$VERSION"
+    echo "Architecture: ${ARCH}"
+    echo "Distro: ${DISTRO}"
+    echo "Image Type: ${IMAGE_TYPE}"
+    echo "Image Target: ${IMAGE_TARGET}"
+}
+
 
 # ===============================================
 # FUNCTIONS - MOUNT /DEV /SYS /PROC
@@ -254,6 +176,22 @@ function mount_rootfs_datafs() {
     mount "${_DATAFS_PARTITION}" "${_DATAFS_PATH}" || error "Could not mount ${_DATAFS_PARTITION} to ${_DATAFS_PATH}!"
 }
 
+# ===============================================
+# FUNCTIONS - INSTALL POLAR FONT
+# ===============================================
+readonly FONT_CONF_DIR="${ROOTFS_CONF_PATH}/font/polar/"
+readonly FONT_ROOTFS_DIR="${ROOTFS_PATH}/usr/share/fonts/truetype/polar"
+
+function install_fonts() {
+    mkdir -p ${FONT_ROOTFS_DIR}
+    local font_files=("arialuni.ttf" "fonts.dir" "fonts.scale")
+    for file in "${font_files[@]}"; do
+        install -m 0644 "${FONT_CONF_DIR}/${file}" "${FONT_ROOTFS_DIR}/${file}" && console_log "Font file ${file} installed successfully."
+        if [ $? -ne 0 ]; then
+            console_log "Error: Failed to install font file ${file}."
+        fi
+    done
+}
 
 
 # ==================== PARAMETERS ====================== #
@@ -302,6 +240,11 @@ do
             ;;
         --image-type)
             IMAGE_TYPE="$2"
+            shift
+            shift
+            ;;
+        --machine)
+            MACHINE="$2"
             shift
             shift
             ;;
@@ -397,7 +340,7 @@ then
     case ${IMAGE_TARGET} in
         loop)
             IMAGE_TARGET_TYPE="loop"
-            [ "${CLEAN}" = "YES" ] && rm -f "${WORK_PATH}/"*.img
+            [ "${CLEAN}" = "YES" ] && rm -f "${TMP_PATH}/"*.img
             ;;
         *dev*)
             IMAGE_TARGET_TYPE="dev"
@@ -407,15 +350,15 @@ then
             ;;
         tarball)
             IMAGE_TARGET_TYPE="tarball"
-            [ "${CLEAN}" = "YES" ] && rm -f "${WORK_PATH}/"*.tar.*
+            [ "${CLEAN}" = "YES" ] && rm -f "${TMP_PATH}/"*.tar.*
             ;;
         installer)
             IMAGE_TARGET_TYPE="installer"
-            [ "${CLEAN}" = "YES" ] && rm -f "${WORK_PATH}/"*.tar.* "${WORK_PATH}/"*.bin
+            [ "${CLEAN}" = "YES" ] && rm -f "${TMP_PATH}/"*.tar.* "${TMP_PATH}/"*.bin
             ;;
         none)
             IMAGE_TARGET_TYPE="none"
-            [ "${CLEAN}" = "YES" ] && rm -f "${WORK_PATH}/"*.tar.* "${WORK_PATH}/"*.bin "${WORK_PATH}/"*.img
+            [ "${CLEAN}" = "YES" ] && rm -f "${TMP_PATH}/"*.tar.* "${TMP_PATH}/"*.bin "${TMP_PATH}/"*.img
             ##echo $SUDO_USER
             exit 0
             ;;
@@ -461,28 +404,15 @@ sudo -u $SUDO_USER mkdir -p "${PKG_DEB_PATH}" "${PKG_TARBALLS_PATH}" "${PKG_BINA
 
 # ====================== MAIN ======================== #
 
-export DEBIAN_FRONTEND=noninteractive
-
-console_log "====================================================="
-console_log "#   Image-Creator v1.0                              #"
-console_log "#                                                   #"
-console_log "#   Building an installer/image with ...            #"
-console_log "#   ${ARCH}                                         #"
-console_log "#   ${DISTRO}                                       #"
-console_log "#   ${IMAGE_TYPE}                                   #"
-console_log "#   ${IMAGE_TARGET}                                 #"
-console_log "#                                                   #"
-console_log "====================================================="
 
 
+print_env
 
 # ===============================================
 # IMAGE-TARGET: LOOP
 # ===============================================
-if [ "${IMAGE_TARGET_TYPE}" = "loop" ]
-then
-    if [ ! -e "${ROOTFS_IMAGE_FILE}" ]
-    then
+if [ "${IMAGE_TARGET_TYPE}" = "loop" ]; then
+    if [ ! -e "${ROOTFS_IMAGE_FILE}" ]; then
         dd if=/dev/zero of="${ROOTFS_IMAGE_FILE}" bs=100M count=160
     fi
 
@@ -503,8 +433,7 @@ fi
 # ===============================================
 # IMAGE-TARGET: DEV
 # ===============================================
-if [ "${IMAGE_TARGET_TYPE}" = "dev" ]
-then
+if [ "${IMAGE_TARGET_TYPE}" = "dev" ]; then
     BOOT_PARTITION="${IMAGE_TARGET}1"
     ROOTFS_PARTITION="${IMAGE_TARGET}2"
     DATAFS_PARTITION="${IMAGE_TARGET}3"
@@ -517,19 +446,17 @@ fi
 # ===============================================
 # create an initial rootfs using debootstrap
 # ===============================================
-if [ ! -e "${ROOTFS_PATH}/etc/os-release" ]
-then
+if [ ! -e "${ROOTFS_PATH}/etc/os-release" ]; then
     console_log "=========================================================="
     console_log "### Create rootfs ### "
     console_log "=========================================================="
-    if [ "${ARCH}" != "i386" -o "${ARCH}" != "amd64" ]
-    then
-        HOSTNAME=${IMAGE_HOSTNAME} ${QEMU_DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH} --include "${PKG_BASE_IMAGE}"
+    if [ "${ARCH}" != "i386" -o "${ARCH}" != "amd64" ]; then
+        HOSTNAME=${IMAGE_HOSTNAME} ${QEMU_DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH} #--include="${PKG_BASE_IMAGE}"
     else
-        HOSTNAME=${IMAGE_HOSTNAME} ${DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH} --include "${PKG_BASE_IMAGE}"
+        HOSTNAME=${IMAGE_HOSTNAME} ${DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH} #--include="${PKG_BASE_IMAGE}"
     fi
 fi
-DISTRO_ID="$(source rootfs/etc/os-release && echo $ID)"
+DISTRO_ID="$(source ${TMP_PATH}/rootfs/etc/os-release && echo $ID)"
 
 mount_dev_sys_proc "${ROOTFS_PATH}"
 
@@ -540,17 +467,15 @@ console_log "=========================================================="
 console_log "### Create sources.list ###"
 console_log "=========================================================="
 
-if [ "${DISTRO_ID}" = "ubuntu" ]
-then
+if [ "${DISTRO_ID}" = "ubuntu" ]; then
     TMP_REPOS="${DISTRO} ${DISTRO}-updates ${DISTRO}-security ${DISTRO}-backports"
-    if [ "${ARCH}" = "armel" -a "${ARCH}" = "armhf" ]
-    then
-        REPO_URL="http://ports.ubuntu.com"
+    if [ "${ARCH}" = "armel" -a "${ARCH}" = "armhf" ]; then
+        REPO_URL="http://de.archive.ubuntu.com/ubuntu"
+        REPO_URL=$REPO_URL_ARM
     else
+        REPO_URL=$REPO_URL_X86
         REPO_URL="http://de.archive.ubuntu.com/ubuntu"
     fi
-    
-    REPO_COMPONENTS="main universe multiverse"
 
     echo "" > "${ROOTFS_PATH}/etc/apt/sources.list"
 
@@ -560,8 +485,7 @@ then
         #echo "deb-src ${REPO_URL} ${REPO} ${REPO_COMPONENTS}" >> "${ROOTFS_PATH}/etc/apt/sources.list"
     done
     
-    if [ "${IMAGE_TYPE}" != "installation" ]
-    then
+    if [ "${IMAGE_TYPE}" != "installation" ]; then
         chroot ${ROOTFS_PATH} ${APT_CMD} update
         chroot ${ROOTFS_PATH} ${APT_CMD} -y install software-properties-common
         #chroot ${ROOTFS_PATH} add-apt-repository -y ppa:beineri/opt-qt-${QT_VERSION}-${DISTRO}
@@ -583,7 +507,7 @@ chroot ${ROOTFS_PATH} /bin/bash -c 'DEBIAN_FRONTEND=noninteractive dpkg-reconfig
 console_log "=========================================================="
 console_log "### Update rootfs ###"
 console_log "=========================================================="
-cp /etc/resolv.conf ${ROOTFS_PATH}/etc
+cp -v /etc/resolv.conf ${ROOTFS_PATH}/etc # TODO: error msg
 chroot ${ROOTFS_PATH} ${APT_CMD} update
 POLICY_RC_D_FILE="${ROOTFS_PATH}/usr/sbin/policy-rc.d"
 install -m 0644 ${ROOTFS_CONF_PATH}/policy-rc.d ${POLICY_RC_D_FILE}
@@ -604,16 +528,14 @@ chroot ${ROOTFS_PATH} ${APT_CMD} -y clean
 console_log "=========================================================="
 console_log "### Install local packages to the rootfs ###"
 console_log "=========================================================="
-if [ "${IMAGE_TYPE}" != "installation" ]
-then
+if [ "${IMAGE_TYPE}" != "installation" ]; then
     #################### Qt 5.15.0 by Stephan Binner ###########################
-    if [ ${INSTALL_QT} = "YES" ]
-    then
+    if [ ${INSTALL_QT} = "YES" ]; then
         ## Tarball packages
         for TAR_FILE in $(ls -1 ${PKG_TARBALLS_PATH}/*.tar*)
         do  
             console_log "## Install $(basename ${TAR_FILE}) to rootfs ##"
-            console_log "=========================================================="
+            console_log ""
             tar -xf ${TAR_FILE} -C ${ROOTFS_PATH}
         done
     fi
@@ -623,38 +545,20 @@ then
     mount -o bind "${PKG_DEB_PATH}" "${ROOTFS_PATH}/mnt"
     for DEB_FILE in $(ls -1 ${PKG_DEB_PATH}/*.deb)
     do
-        console_log "## Install $(basename ${DEB_FILE}) to rootfs ##"
-        console_log "=========================================================="
+        console_log ""
+        console_log "-- Install $(basename ${DEB_FILE}) to rootfs ##"
         chroot "${ROOTFS_PATH}" dpkg -i "/mnt/$(basename ${DEB_FILE})"
     done
     umount "${ROOTFS_PATH}/mnt"
 
     ## Binary files
     find ${PKG_BINARIES_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -r {} ${ROOTFS_PATH} \;
+
+    # Polar font
+    step_log "### Install Polar truetype font (Arial Unicode) ###"
+    install_fonts
+
 fi
-
-
-# ===============================================
-# SITEMANAGER
-# ===============================================
-
-console_log "Install Site-Manager for Remote Maintenance"
-    
-for TAR_FILE in $(ls -1 ${PKG_SITEMANAGER_PATH}/*.tar*)
-do
-    console_log "## Install $(basename ${TAR_FILE}) to rootfs ##"
-    console_log "=========================================================="
-    tar -xvf ${TAR_FILE} -C ${ROOTFS_PATH}/tmp
-    chroot "${ROOTFS_PATH}" ls -al "/tmp/"
-# Hint: this is formated because of EOF to pipe the install.sh script to chroot
-# ---
-cat <<EOF | chroot "${ROOTFS_PATH}" 
-cd /tmp/SiteManager_Installer/
-./install.sh || echo "Failed to remove the directory"
-EOF
-# ---
-    chroot "${ROOTFS_PATH}" rm -r "/tmp/SiteManager_Installer" && chroot "${ROOTFS_PATH}" rm -r "/tmp/INSTALL_SITEMANAGER"
-done
 
 
 # ===============================================
@@ -759,15 +663,6 @@ mv ${ROOTFS_PATH}/etc/ntp.conf ${ROOTFS_PATH}/etc/ntp.conf.standard
 install -m 0644 ${ROOTFS_CONF_PATH}/etc/ntp.conf ${ROOTFS_PATH}/etc/
 #install -m 0644 ${ROOTFS_CONF_PATH}/etc/chrony.conf ${ROOTFS_PATH}/etc/
 
-## add system tool calls for application in sudoers (mount, etc...)
-##
-# ALL       ALL =(ALL) NOPASSWD: /bin/mount
-# ALL       ALL =(ALL) NOPASSWD: /bin/umount
-# ALL       ALL =(ALL) NOPASSWD: /bin/date
-# ALL       ALL =(ALL) NOPASSWD: /sbin/reboot
-# ALL       ALL =(ALL) NOPASSWD: /sbin/halt
-# ALL       ALL =(ALL) NOPASSWD: /sbin/hwclock
-##
 console_log "=========================================================="
 console_log "### Configure sudoers ###"
 console_log "=========================================================="
@@ -828,25 +723,20 @@ umount_dev_sys_proc "${ROOTFS_PATH}"
 # ===============================================
 # TARBALL / INSTALLER
 # ===============================================
-if [ "${IMAGE_TARGET_TYPE}" = "tarball" -o "${IMAGE_TARGET_TYPE}" = "installer" ]
-then
-    console_log "=========================================================="
-    console_log "### Create rootfs tarball ###"
-    console_log "=========================================================="
+if [ "${IMAGE_TARGET_TYPE}" = "tarball" -o "${IMAGE_TARGET_TYPE}" = "installer" ]; then
+    step_log "### Create rootfs tarball ###"
     pushd "${ROOTFS_PATH}" &> /dev/null
     tar -cjf ${ROOTFS_TARBALL} * || exit 1
     chgrp $SUDO_GID "${ROOTFS_TARBALL}"
     chown $SUDO_USER "${ROOTFS_TARBALL}"
     popd &> /dev/null
 
-    if [ "${IMAGE_TARGET_TYPE}" = "installer" -o "${IMAGE_TYPE}" = "installation" ]
-    then
-        INSTALLER_BINARY="${WORK_PATH}/${IMAGE_TYPE}-image-installer_$(date '+%Y-%m-%d_%H-%M-%S').bin"
+    if [ "${IMAGE_TARGET_TYPE}" = "installer" -o "${IMAGE_TYPE}" = "installation" ]; then
         cat "${INSTALLER_SCRIPT}" "${ROOTFS_TARBALL}" > "${INSTALLER_BINARY}"
         chmod +x "${INSTALLER_BINARY}"
         chgrp $SUDO_GID "${INSTALLER_BINARY}"
         chown $SUDO_USER "${INSTALLER_BINARY}"
-        sudo -u $SUDO_USER ln -sf "${INSTALLER_BINARY}" "${WORK_PATH}/${IMAGE_TYPE}-image-installer_latest.bin"
+        sudo -u $SUDO_USER ln -sf "${INSTALLER_BINARY}" "${TMP_PATH}/${IMAGE_TYPE}-image-installer_latest.bin"
         ##echo installer done here...
         ##ls -l "${INSTALLER_BINARY}"
     fi
@@ -855,11 +745,9 @@ fi
 # ===============================================
 # IMAGE-TYPE: INSTALLATION
 # ===============================================
-if [ "${IMAGE_TYPE}" = "installation" ]
-then
-    LATEST_INSTALLER_BINARY="$(readlink -f "${WORK_PATH}/${IMAGE_TYPE}-image-installer_latest.bin")"
-    if [ -e "${LATEST_INSTALLER_BINARY}" ]
-    then
+if [ "${IMAGE_TYPE}" = "installation" ]; then
+    LATEST_INSTALLER_BINARY="$(readlink -f "${TMP_PATH}/${IMAGE_TYPE}-image-installer_latest.bin")"
+    if [ -e "${LATEST_INSTALLER_BINARY}" ]; then
         cp ${LATEST_INSTALLER_BINARY} "${ROOTFS_PATH}/home/${IMAGE_USER}/"
     else
         console_log "Image installer binary not found!"
@@ -872,13 +760,11 @@ fi
 # ===============================================
 # IMAGE-TYPE: DEV / LOOP
 # ===============================================
-if [ "${IMAGE_TARGET_TYPE}" = "dev" -o "${IMAGE_TARGET_TYPE}" = "loop" ]
-then
+if [ "${IMAGE_TARGET_TYPE}" = "dev" -o "${IMAGE_TARGET_TYPE}" = "loop" ]; then
     losetup -D
     umount "${DATAFS_PATH}"
     umount "${ROOTFS_PATH}"
 fi
 
-console_log "=========================================================="
-console_log "### DONE! ###"
-console_log "=========================================================="
+step_log "### DONE! ###"
+

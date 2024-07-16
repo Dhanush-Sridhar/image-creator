@@ -1,0 +1,83 @@
+<?PM-XML version="1.0" encoding="UTF-8" ?>
+<polar_cut_program version="1.1">
+   <application  name="N PRO PDS 2.3.0A (6159e0d)" >
+      <security_query>01ODIBHIFO</security_query>
+   </application>
+   <program_info>
+      <value  id="1" type="job_name" >Start Up</value>
+   </program_info>
+   <program_global>
+      <creation_time_stamp>
+         <date>
+            <year>2024</year>
+            <month>6</month>
+            <day>18</day>
+         </date>
+         <time>
+            <hour>14</hour>
+            <minute>30</minute>
+            <second>45</second>
+         </time>
+      </creation_time_stamp>
+      <write_protection>0</write_protection>
+      <alignment_adjustment_1>0</alignment_adjustment_1>
+      <alignment_adjustment_2>0</alignment_adjustment_2>
+      <author>NPRO-14B31F2DC3FD</author>
+      <owner>NPRO-14B31F2DC3FD</owner>
+      <npro_order>First Sample</npro_order>
+   </program_global>
+   <program_parameters/>
+   <program_steps>
+      <cut_step number="1" type="6" >
+         <comment  type="8" ></comment>
+      </cut_step>
+      <cut_step number="2" type="0" >
+         <measure>900</measure>
+         <spezial_function id="4"/>
+      </cut_step>
+      <cut_step number="3" type="0" >
+         <measure>850</measure>
+         <spezial_function id="4"/>
+      </cut_step>
+   </program_steps>
+   <program_graphic/>
+   <program_process>
+      <run_count>10000</run_count>
+      <sheet_count>0</sheet_count>
+      <cuts_counter>186</cuts_counter>
+      <misfed_counter>0</misfed_counter>
+      <production_counter>5310</production_counter>
+      <user_production_counter>0</user_production_counter>
+      <production_timesum>264</production_timesum>
+      <time_stamp_list count="2" >
+         <time_stamp_item idx="0" type="2" >
+            <date>
+               <year>2024</year>
+               <month>6</month>
+               <day>21</day>
+            </date>
+            <time>
+               <hour>11</hour>
+               <minute>6</minute>
+               <second>18</second>
+            </time>
+            <info>started</info>
+         </time_stamp_item>
+         <time_stamp_item idx="1" type="4" >
+            <date>
+               <year>2024</year>
+               <month>7</month>
+               <day>2</day>
+            </date>
+            <time>
+               <hour>14</hour>
+               <minute>55</minute>
+               <second>49</second>
+            </time>
+            <info>paused</info>
+         </time_stamp_item>
+      </time_stamp_list>
+   </program_process>
+   <program_images/>
+   <program_book/>
+</polar_cut_program>

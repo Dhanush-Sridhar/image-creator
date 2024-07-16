@@ -1,0 +1,35 @@
+# display settings
+xrandr --output DP-2 --off
+xrandr --output HDMI-1 --auto --primary
+
+# keyboard settings
+setxkbmap -option "grp:lctrl_lshift_toggle" -layout "de" &
+loadkeys de
+
+# disable screen blanking / engery saver mode
+xset s off
+xset s noblank
+xset -dpms
+
+killall x11vnc
+killall pds_cutter
+killall ehmi_pm
+
+x11vnc -wait 50 -noxdamage -display :0 -forever -o /var/log/x11vnc.log -bg -viewonly -usepw
+
+mountpoint -q ${HOME}/BoxPC/ftp || sudo mount --bind /mnt ${HOME}/ftp
+
+
+if [ -e "/opt/starthmi.sh" ]
+then
+	## script should be installed with the application package
+    /pm-app/starthmi.sh
+else
+	## old style may not successful if library path is no set properly
+	if [ -e "/opt/pds-cutter/pds_cutter" ]; then
+		export LD_LIBRARY_PATH=/opt/qt5-15-15 && export QT_PLUGIN_PATH=/opt/qt5-15-15/plugins && /pm-app/e-hmi/bin/ehmi_pm 2>&1 | systemd-cat -t ehmi_pm
+		/pm-app/e-hmi/bin/pds_cutter 2>&1 | systemd-cat -t pds-cutter
+	else
+		/usr/bin/xterm
+	fi
+fi

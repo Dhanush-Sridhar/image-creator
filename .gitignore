@@ -4,6 +4,7 @@
 
 # build dirs
 rootfs/
+tmp/
 
 # artefacts
 packages/binaries
@@ -17,3 +18,8 @@ rootfs*.tar.*
 *.bin
 *.bak
 *.deb
+*.img
+
+# IDE
+.vscode
+.idea
