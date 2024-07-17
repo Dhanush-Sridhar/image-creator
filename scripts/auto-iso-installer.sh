@@ -35,6 +35,11 @@ readonly TMP_DIR="${REPO_ROOT}/tmp"
 readonly ROOTFS_LIVE_DIR="$TMP_DIR/live-rootfs"
 readonly ISO_NAME="$TMP_DIR/polar-live-$(date +"%Y%m%d").iso"
 readonly ISO_NAME_LATEST="$TMP_DIR/polar-live-latest.iso"
+readonly IMG_NAME="$TMP_DIR/polar-live-$(date +"%Y%m%d").img"
+readonly BOOT_PARTITION_SIZE=512 # in MB
+readonly BOOT_MNT=/mnt/boot
+readonly ROOT_MNT=/mnt/rootfs
+
 
 readonly BINARY_FILE="$TMP_DIR/production-image-installer_latest.bin"
 
@@ -87,6 +92,8 @@ function host_setup(){
   apt-get update
   apt-get install -y debootstrap grub-pc-bin grub-efi-amd64-bin mtools xorriso
 }
+
+
 
 function create_rootfs(){
 
@@ -142,6 +149,36 @@ cp -v $BINARY_FILE $ROOTFS_LIVE_DIR/root/
     ! mountpoint -q $ROOTFS_LIVE_DIR/dev || umount $ROOTFS_LIVE_DIR/dev
     ! mountpoint -q $ROOTFS_LIVE_DIR/proc || umount $ROOTFS_LIVE_DIR/proc
     ! mountpoint -q $ROOTFS_LIVE_DIR/sys || umount $ROOTFS_LIVE_DIR/sys
+}
+
+function create_img(){
+
+    #check if rootfs exists
+    if [ ! -d $ROOTFS_LIVE_DIR ]; then
+        echo "ERROR: RootFS does not exists. Run --rootfs first."
+        exit 1
+    fi
+
+    the size of the rootfs directory
+    ROOT_PARTITION_SIZE=$(du -s $ROOTFS_DIR | awk '{print $1}')
+
+    echo "Rootfs size: $ROOT_PARTITION_SIZE"
+    #Totalt size of the image file
+    readonly KBYTE=1024
+    
+    DD_Count=$(echo "BOOT_PARTITION_SIZE*$KBYTE+$ROOT_PARTITION_SIZE" | bc)
+
+    echo "Total size of the image file: $DD_Count"
+
+    # create the image file
+    dd if=/dev/zero of=$IMAGE_FILE bs=1K count=$DD_Count
+
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Could not create image."
+        exit 1
+    fi
+
+
 }
 
 function create_iso(){
