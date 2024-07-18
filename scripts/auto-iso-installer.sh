@@ -35,10 +35,10 @@ readonly TMP_DIR="${REPO_ROOT}/tmp"
 readonly ROOTFS_LIVE_DIR="$TMP_DIR/live-rootfs"
 readonly ISO_NAME="$TMP_DIR/polar-live-$(date +"%Y%m%d").iso"
 readonly ISO_NAME_LATEST="$TMP_DIR/polar-live-latest.iso"
-readonly IMG_NAME="$TMP_DIR/polar-live-$(date +"%Y%m%d").img"
+readonly IMAGE_FILE="$TMP_DIR/polar-live-$(date +"%Y%m%d").img"
 readonly BOOT_PARTITION_SIZE=512 # in MB
 readonly BOOT_MNT=/mnt/boot
-readonly ROOT_MNT=/mnt/rootfs
+readonly ROOT_MNT="$TMP_DIR/mnt"
 LOOP_DEV_NAME="$TMP_DIR/loop_dev"
 
 
@@ -95,6 +95,19 @@ function host_setup(){
 }
 
 
+function mount_virtual_fs(){
+    # Mount virtual filesystems
+    mount --bind /dev $1/dev
+    mount --bind /proc $1/proc
+    mount --bind /sys $1/sys
+}
+
+function umount_virtual_fs(){
+    # Unmount virtual filesystems
+    ! mountpoint -q $1/dev || umount $1/dev
+    ! mountpoint -q $1/proc || umount $1/proc
+    ! mountpoint -q $1/sys || umount $1/sys
+}
 
 function create_rootfs(){
 
@@ -106,6 +119,8 @@ function create_rootfs(){
     mount --bind /dev $ROOTFS_LIVE_DIR/dev
     mount --bind /proc $ROOTFS_LIVE_DIR/proc
     mount --bind /sys $ROOTFS_LIVE_DIR/sys
+
+    mount_virtual_fs $ROOTFS_LIVE_DIR
 
 # Configure rootfs
 chroot $ROOTFS_LIVE_DIR /bin/bash <<EOF
@@ -144,12 +159,10 @@ EOF
 
 
 # Copy binary installer into rootfs
-cp -v $BINARY_FILE $ROOTFS_LIVE_DIR/root/
+    cp -v $BINARY_FILE $ROOTFS_LIVE_DIR/root/
 
 # Unmount virtual filesystems
-    ! mountpoint -q $ROOTFS_LIVE_DIR/dev || umount $ROOTFS_LIVE_DIR/dev
-    ! mountpoint -q $ROOTFS_LIVE_DIR/proc || umount $ROOTFS_LIVE_DIR/proc
-    ! mountpoint -q $ROOTFS_LIVE_DIR/sys || umount $ROOTFS_LIVE_DIR/sys
+    umount_virtual_fs $ROOTFS_LIVE_DIR
 }
 
 function create_img(){
@@ -159,17 +172,20 @@ function create_img(){
         echo "ERROR: RootFS does not exists. Run --rootfs first."
         exit 1
     fi
+    umount_virtual_fs $ROOTFS_LIVE_DIR
 
-    the size of the rootfs directory
+    #the size of the rootfs directory
     ROOT_PARTITION_SIZE=$(du -s $ROOTFS_DIR | awk '{print $1}')
 
     echo "Rootfs size: $ROOT_PARTITION_SIZE"
     #Totalt size of the image file
     readonly KBYTE=1024
     
-    DD_Count=$(echo "BOOT_PARTITION_SIZE*$KBYTE+$ROOT_PARTITION_SIZE" | bc)
+    DD_Count=$(echo "$BOOT_PARTITION_SIZE*$KBYTE+$ROOT_PARTITION_SIZE" | bc)
+    Image_Size=$((echo "$DD_Count*$KBYTE" | bc) | numfmt --to=si)
 
-    echo "Total size of the image file: $DD_Count"
+    echo "Total size of the image file: $Image_Size"
+    echo "Creating image file $IMAGE_FILE of size $Image_Size"
 
     # create the image file
     dd if=/dev/zero of=$IMAGE_FILE bs=1K count=$DD_Count
@@ -180,8 +196,9 @@ function create_img(){
     fi
 
     # Create the partition table
-    sgdisk --clear $IMAGE_FILE
-    sgdisk -n 1:0:0 -t 1:8300 $IMAGE_FILE
+    sgdisk -Z $IMAGE_FILE
+    sgdisk -n 1:0:+${BOOT_PARTITION_SIZE}M -t 1:ef00 $IMAGE_FILE
+    sgdisk -n 2:0:0 -t 2:8300 $IMAGE_FILE
 
     # attach the image file to a loop device
     LOOP_DEV=$(losetup -fP --show $IMAGE_FILE)
@@ -192,7 +209,8 @@ function create_img(){
 
 
     # Create the file system
-    mkfs.ext4 ${LOOP_DEV}p1 
+    mkfs.vfat ${LOOP_DEV}p1 && echo "Boot partition created" || echo "Could not create boot partition."
+    mkfs.ext4 ${LOOP_DEV}p2 && echo "Rootfs partition created" || echo "Could not create rootfs partition."
 
 
 
@@ -201,27 +219,98 @@ function create_img(){
         rm -rf $ROOT_MNT
     fi
 
+    # create rootfs mount directory
     mkdir -p $ROOT_MNT
-    mount ${LOOP_DEV}p1 $ROOT_MNT
+    # mount rootfs partition
+    mount ${LOOP_DEV}p2 $ROOT_MNT
+
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Could not mount rootfs partition."
+        exit 1
+    fi
+
+    #create efi boot directory
+    mkdir -p $ROOT_MNT/boot/efi
+
+    # mount efi boot partition
+    mount ${LOOP_DEV}p1 $ROOT_MNT/boot/efi
+
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Could not mount efi boot partition."
+        exit 1
+    fi
+
+    echo "Image file mounted successfully."
 
     # copy the rootfs to the image file
    cp -a $ROOTFS_LIVE_DIR/* $ROOT_MNT
 
-   
+   #mount dev, proc and sys
+    mount_virtual_fs $ROOT_MNT
+
+
+  # copy the kernel and initrd to the boot partition
+    cp -v $VMLINUZ $ROOT_MNT/boot/vmlinuz &&  echo "Kernel copied successfully." || echo "Could not copy kernel."
+    cp -v $INITRD $ROOT_MNT/boot/initrd  && echo "Initrd copied successfully." || echo "Could not copy initrd."
+
+   # install grub
+    grub-install --target=x86_64-efi --efi-directory=$ROOT_MNT/boot/efi --bootloader-id=UBUNTU --boot-directory=$ROOT_MNT/boot --recheck $LOOP_DEV 
+
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Could not install grub."
+        exit 1
+        
+    else
+        echo "Grub installed successfully."
+    fi
+
+    # get boot partition UUID
+    BOOT_UUID=$(blkid -s UUID -o value ${LOOP_DEV}p1)
+
+    # get rootfs partition UUID
+    ROOTFS_UUID=$(blkid -s UUID -o value ${LOOP_DEV}p2)
+
+    # update the grub configuration
+cat <<EOF > $ROOT_MNT/boot/grub/grub.cfg
+    set default=0
+    set timeout=5
+
+    menuentry "Install PolarOS" {
+        linux /boot/vmlinuz root=UUID=$ROOTFS_UUID
+        initrd /boot/initrd
+
+    }
+EOF
+    
+    # configure fstab
+
+cat <<EOF > $ROOT_MNT/etc/fstab
+    UUID=$ROOTFS_UUID / ext4 defaults 0 1
+    UUID=$BOOT_UUID /boot/efi vfat defaults 0 1
+
+EOF
+
+    echo "Image file created successfully."
 }
 
 function clean_img(){
+
+    umount_virtual_fs $ROOT_MNT
     # Unmount the image file
+    
+    ! mountpoint -q $ROOT_MNT/boot/efi || umount $ROOT_MNT/boot/efi
     ! mountpoint -q $ROOT_MNT || umount $ROOT_MNT
 
+    rm -rf $ROOT_MNT
+
     # detach the image file from the loop device
-    losetup -d "$(readlink -f ${LOOP_DEVICE_NAME}/*)" && echo "Image file detached from loop device." || echo "Could not detach image file from loop device."
+    losetup -d "$(readlink -f ${LOOP_DEV_NAME}/*)" && echo "Image file detached from loop device." || echo "Could not detach image file from loop device."
 
     # remove the loop device
     rm -rf $LOOP_DEV_NAME
 
     # remove the image file
-    rm -rf $IMAGE_FILE
+   # rm -rf $IMAGE_FILE
 }
 
 function create_iso(){
@@ -297,7 +386,22 @@ while [[ $# -gt 0 ]]; do
             shift
         ;;
 
+        --img)
+            root_check
+            create_img
+            exit 0
+
+        ;;
+
+        --clean)
+            root_check
+            clean_img
+            exit 0
+
+        ;;
+
         --iso)
+            root_check
             create_iso
             shift
         ;;
