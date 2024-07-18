@@ -37,6 +37,7 @@ readonly ISO_NAME="$TMP_DIR/polar-live-$(date +"%Y%m%d").iso"
 readonly ISO_NAME_LATEST="$TMP_DIR/polar-live-latest.iso"
 readonly IMAGE_FILE="$TMP_DIR/polar-live-$(date +"%Y%m%d").img"
 readonly BOOT_PARTITION_SIZE=512 # in MB
+readonly ROOT_PARTITION_KERNEL_SIZE=2048 # in MB
 readonly BOOT_MNT=/mnt/boot
 readonly ROOT_MNT="$TMP_DIR/mnt"
 LOOP_DEV_NAME="$TMP_DIR/loop_dev"
@@ -176,14 +177,14 @@ function create_img(){
     umount_virtual_fs $ROOTFS_LIVE_DIR
 
     #get the size of the rootfs directory
-    ROOT_PARTITION_SIZE=$(du -s $ROOTFS_DIR | awk '{print $1}')
+    ROOT_PARTITION_SIZE=$(du -s $ROOTFS_LIVE_DIR | awk '{print $1}')
 
     echo "Rootfs size: $ROOT_PARTITION_SIZE"
     #Totalt size of the image file
     readonly KBYTE=1024
     
     # calculate the size of the image file
-    DD_Count=$(echo "$BOOT_PARTITION_SIZE*$KBYTE+$ROOT_PARTITION_SIZE" | bc)
+    DD_Count=$(echo "($BOOT_PARTITION_SIZE*$KBYTE)+$ROOT_PARTITION_SIZE+($ROOT_PARTITION_KERNEL_SIZE*$KBYTE)" | bc)
 
     # convert the size to human readable format just for display
     Image_Size=$((echo "$DD_Count*$KBYTE" | bc) | numfmt --to=si)
