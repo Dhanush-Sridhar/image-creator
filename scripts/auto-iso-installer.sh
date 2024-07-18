@@ -39,6 +39,7 @@ readonly IMG_NAME="$TMP_DIR/polar-live-$(date +"%Y%m%d").img"
 readonly BOOT_PARTITION_SIZE=512 # in MB
 readonly BOOT_MNT=/mnt/boot
 readonly ROOT_MNT=/mnt/rootfs
+LOOP_DEV_NAME="$TMP_DIR/loop_dev"
 
 
 readonly BINARY_FILE="$TMP_DIR/production-image-installer_latest.bin"
@@ -178,7 +179,49 @@ function create_img(){
         exit 1
     fi
 
+    # Create the partition table
+    sgdisk --clear $IMAGE_FILE
+    sgdisk -n 1:0:0 -t 1:8300 $IMAGE_FILE
 
+    # attach the image file to a loop device
+    LOOP_DEV=$(losetup -fP --show $IMAGE_FILE)
+
+    # create persitant loop device for further use
+    mkdir -p $LOOP_DEV_NAME
+    ln -s $LOOP_DEV $LOOP_DEV_NAME
+
+
+    # Create the file system
+    mkfs.ext4 ${LOOP_DEV}p1 
+
+
+
+    # Mount the image file
+    if [ -d $ROOT_MNT ]; then
+        rm -rf $ROOT_MNT
+    fi
+
+    mkdir -p $ROOT_MNT
+    mount ${LOOP_DEV}p1 $ROOT_MNT
+
+    # copy the rootfs to the image file
+   cp -a $ROOTFS_LIVE_DIR/* $ROOT_MNT
+
+   
+}
+
+function clean_img(){
+    # Unmount the image file
+    ! mountpoint -q $ROOT_MNT || umount $ROOT_MNT
+
+    # detach the image file from the loop device
+    losetup -d "$(readlink -f ${LOOP_DEVICE_NAME}/*)" && echo "Image file detached from loop device." || echo "Could not detach image file from loop device."
+
+    # remove the loop device
+    rm -rf $LOOP_DEV_NAME
+
+    # remove the image file
+    rm -rf $IMAGE_FILE
 }
 
 function create_iso(){
