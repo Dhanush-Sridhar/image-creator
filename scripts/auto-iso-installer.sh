@@ -36,7 +36,7 @@ readonly ROOTFS_LIVE_DIR="$TMP_DIR/live-rootfs"
 readonly ISO_NAME="$TMP_DIR/polar-live-$(date +"%Y%m%d").iso"
 readonly ISO_NAME_LATEST="$TMP_DIR/polar-live-latest.iso"
 readonly IMAGE_FILE="$TMP_DIR/polar-live-$(date +"%Y%m%d").img"
-readonly BOOT_PARTITION_SIZE=512 # in MB
+readonly BOOT_PARTITION_SIZE=20 # in MB
 readonly ROOT_PARTITION_KERNEL_SIZE=2304 # in MB
 readonly BOOT_MNT=/mnt/boot
 readonly ROOT_MNT="$TMP_DIR/mnt"
@@ -184,7 +184,7 @@ function create_img(){
     readonly KBYTE=1024
     
     # calculate the size of the image file
-    DD_Count=$(echo "($BOOT_PARTITION_SIZE*$KBYTE)+$ROOT_PARTITION_SIZE+($ROOT_PARTITION_KERNEL_SIZE*$KBYTE)" | bc)
+    DD_Count=$(echo "$ROOT_PARTITION_SIZE+($ROOT_PARTITION_KERNEL_SIZE*$KBYTE)" | bc)
 
     # convert the size to human readable format just for display
     Image_Size=$((echo "$DD_Count*$KBYTE" | bc) | numfmt --to=si)
@@ -200,10 +200,10 @@ function create_img(){
         exit 1
     fi
 
-    # Create the partition table
-    sgdisk -g $IMAGE_FILE
-    sgdisk -n 1:2048:+${BOOT_PARTITION_SIZE}M -t 1:ef00 $IMAGE_FILE
-    sgdisk -n 2:0:0 -t 2:8300 $IMAGE_FILE
+
+    # create a MBR partition table
+    parted -s $IMAGE_FILE mklabel msdos
+    parted -s $IMAGE_FILE mkpart primary ext4 1MiB 100%
 
     # attach the image file to a loop device
     LOOP_DEV=$(losetup -fP --show $IMAGE_FILE)
@@ -214,8 +214,7 @@ function create_img(){
 
 
     # Create the file system
-    mkfs.vfat ${LOOP_DEV}p1 && echo "Boot partition created" || echo "Could not create boot partition."
-    mkfs.ext4 ${LOOP_DEV}p2 && echo "Rootfs partition created" || echo "Could not create rootfs partition."
+    mkfs.ext4 ${LOOP_DEV}p1 && echo "Rootfs partition created" || echo "Could not create rootfs partition."
 
 
 
@@ -227,7 +226,7 @@ function create_img(){
     # create rootfs mount directory
     mkdir -p $ROOT_MNT
     # mount rootfs partition
-    mount ${LOOP_DEV}p2 $ROOT_MNT
+    mount ${LOOP_DEV}p1 $ROOT_MNT
 
     if [ $? -ne 0 ]; then
         echo "ERROR: Could not mount rootfs partition."
@@ -235,45 +234,32 @@ function create_img(){
     fi
 
     #create efi boot directory
-    mkdir -p $ROOT_MNT/boot/efi
+    mkdir -p $ROOT_MNT/boot/grub
 
-    # mount efi boot partition
-    mount ${LOOP_DEV}p1 $ROOT_MNT/boot/efi
-
-    if [ $? -ne 0 ]; then
-        echo "ERROR: Could not mount efi boot partition."
-        exit 1
-    fi
-
+   
     echo "Image file mounted successfully."
 
     # copy the rootfs to the image file
-   cp -a $ROOTFS_LIVE_DIR/* $ROOT_MNT
+    cp -a $ROOTFS_LIVE_DIR/* $ROOT_MNT
 
    #mount dev, proc and sys
     mount_virtual_fs $ROOT_MNT
 
 
-  # copy the kernel and initrd to the boot partition
-  #  cp -v $VMLINUZ $ROOT_MNT/boot/vmlinuz &&  echo "Kernel copied successfully." || echo "Could not copy kernel."
-  #  cp -v $INITRD $ROOT_MNT/boot/initrd  && echo "Initrd copied successfully." || echo "Could not copy initrd."
-
-   # install grub
-    grub-install --target=x86_64-efi --efi-directory=$ROOT_MNT/boot/efi --bootloader-id=UBUNTU --boot-directory=$ROOT_MNT/boot --recheck $LOOP_DEV 
+    # install grub BIOS bootloader
+    grub-install --target=i386-pc --boot-directory=$ROOT_MNT/boot --recheck $LOOP_DEV
 
     if [ $? -ne 0 ]; then
         echo "ERROR: Could not install grub."
-        exit 1
+        clean_img
         
     else
         echo "Grub installed successfully."
     fi
 
     # get boot partition UUID
-    BOOT_UUID=$(blkid -s UUID -o value ${LOOP_DEV}p1)
+    ROOTFS_UUID=$(blkid -s UUID -o value ${LOOP_DEV}p1)
 
-    # get rootfs partition UUID
-    ROOTFS_UUID=$(blkid -s UUID -o value ${LOOP_DEV}p2)
 
     # update the grub configuration
 cat <<EOF > $ROOT_MNT/boot/grub/grub.cfg
@@ -282,7 +268,7 @@ cat <<EOF > $ROOT_MNT/boot/grub/grub.cfg
 
     menuentry "Install PolarOS" {
         linux /boot/vmlinuz root=UUID=$ROOTFS_UUID
-        initrd /boot/initrd
+        initrd /boot/initrd.img
 
     }
 EOF
@@ -291,15 +277,12 @@ EOF
 
 cat <<EOF > $ROOT_MNT/etc/fstab
     UUID=$ROOTFS_UUID / ext4 defaults 0 1
-    UUID=$BOOT_UUID /boot/efi vfat defaults 0 1
-
+   
 EOF
 
-    # Install kernel and initrd
-    if ! chroot $ROOT_MNT apt install -y linux-image-generic initramfs-tools; then
-        echo "ERROR: Could not install kernel and initrd."
-        clean_img
-    fi
+    # copy kernel and initrd
+    cp -v $VMLINUZ $ROOT_MNT/boot/ && echo "Kernel copied successfully." || echo "Could not copy kernel."
+    cp -v $INITRD $ROOT_MNT/boot/ && echo "Initrd copied successfully." || echo "Could not copy initrd."
 
     echo "Image file created successfully."
 }
@@ -309,7 +292,7 @@ function clean_img(){
     umount_virtual_fs $ROOT_MNT
     # Unmount the image file
     
-    ! mountpoint -q $ROOT_MNT/boot/efi || umount $ROOT_MNT/boot/efi
+    #! mountpoint -q $ROOT_MNT/boot/efi || umount $ROOT_MNT/boot/efi
     ! mountpoint -q $ROOT_MNT || umount $ROOT_MNT
 
     rm -rf $ROOT_MNT
