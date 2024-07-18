@@ -172,16 +172,20 @@ function create_img(){
         echo "ERROR: RootFS does not exists. Run --rootfs first."
         exit 1
     fi
+    # just in case if not unmounted in previous run
     umount_virtual_fs $ROOTFS_LIVE_DIR
 
-    #the size of the rootfs directory
+    #get the size of the rootfs directory
     ROOT_PARTITION_SIZE=$(du -s $ROOTFS_DIR | awk '{print $1}')
 
     echo "Rootfs size: $ROOT_PARTITION_SIZE"
     #Totalt size of the image file
     readonly KBYTE=1024
     
+    # calculate the size of the image file
     DD_Count=$(echo "$BOOT_PARTITION_SIZE*$KBYTE+$ROOT_PARTITION_SIZE" | bc)
+
+    # convert the size to human readable format just for display
     Image_Size=$((echo "$DD_Count*$KBYTE" | bc) | numfmt --to=si)
 
     echo "Total size of the image file: $Image_Size"
@@ -196,8 +200,8 @@ function create_img(){
     fi
 
     # Create the partition table
-    sgdisk -Z $IMAGE_FILE
-    sgdisk -n 1:0:+${BOOT_PARTITION_SIZE}M -t 1:ef00 $IMAGE_FILE
+    sgdisk -g $IMAGE_FILE
+    sgdisk -n 1:2048:+${BOOT_PARTITION_SIZE}M -t 1:ef00 $IMAGE_FILE
     sgdisk -n 2:0:0 -t 2:8300 $IMAGE_FILE
 
     # attach the image file to a loop device
@@ -226,7 +230,7 @@ function create_img(){
 
     if [ $? -ne 0 ]; then
         echo "ERROR: Could not mount rootfs partition."
-        exit 1
+        return  1
     fi
 
     #create efi boot directory
@@ -250,8 +254,8 @@ function create_img(){
 
 
   # copy the kernel and initrd to the boot partition
-    cp -v $VMLINUZ $ROOT_MNT/boot/vmlinuz &&  echo "Kernel copied successfully." || echo "Could not copy kernel."
-    cp -v $INITRD $ROOT_MNT/boot/initrd  && echo "Initrd copied successfully." || echo "Could not copy initrd."
+  #  cp -v $VMLINUZ $ROOT_MNT/boot/vmlinuz &&  echo "Kernel copied successfully." || echo "Could not copy kernel."
+  #  cp -v $INITRD $ROOT_MNT/boot/initrd  && echo "Initrd copied successfully." || echo "Could not copy initrd."
 
    # install grub
     grub-install --target=x86_64-efi --efi-directory=$ROOT_MNT/boot/efi --bootloader-id=UBUNTU --boot-directory=$ROOT_MNT/boot --recheck $LOOP_DEV 
@@ -290,6 +294,12 @@ cat <<EOF > $ROOT_MNT/etc/fstab
 
 EOF
 
+    # Install kernel and initrd
+    if ! chroot $ROOT_MNT apt install -y linux-image-generic initramfs-tools; then
+        echo "ERROR: Could not install kernel and initrd."
+        clean_img
+    fi
+
     echo "Image file created successfully."
 }
 
@@ -319,9 +329,11 @@ function create_iso(){
         echo "ERROR: RootFS does not exists. Run --rootfs first." && exit 1
     fi
 
-    mkdir -p $ROOTFS_LIVE_DIR/boot/grub
-    echo "Copy kernel ..." && cp -v $VMLINUZ $ROOTFS_LIVE_DIR/boot/vmlinuz
-    echo "Copy Initrd ..." && cp -v $INITRD $ROOTFS_LIVE_DIR/boot/initrd
+
+    # install linux kernel
+
+    
+  
 
 cat <<EOF > $ROOTFS_LIVE_DIR/boot/grub/grub.cfg
 set default=0
@@ -389,6 +401,7 @@ while [[ $# -gt 0 ]]; do
         --img)
             root_check
             create_img
+            clean_img
             exit 0
 
         ;;
