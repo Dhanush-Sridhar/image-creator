@@ -2,33 +2,6 @@
 
 set -eo pipefail
 
-help()
-{
-cat << EOM
-Build Linux Live ISO for running the binary production installer from USB.
-
-Usage:
-  ./build [--options]
-
-Options:
-  -h, --help    	  Show this help message.
-  --init            Install dependencies on host
-  --rootfs           Build rootfs and iso file.
-  --mkrootfs        Create root file system.
-  --mkiso           Generate the iso.
-  --kernel          Path to custom kernel.
-  --initrd          Path to custom Initial RamDisk.
-  --clean	          Delete rootfs.
-  --test            Test the ISO with qemu.
-  --all             Build rootfs, iso and run qemu test.
-
-
-Know issues:
-- stop at 'Chosen extractor for .deb packages: ar' - delete rootfs ==> use --clean
-- stop with 'tried to extract package, but file already exists. Exit.' ==> use --clean
-EOM
-}
-
 readonly REPO_ROOT=$(git rev-parse --show-toplevel) 
 readonly TMP_DIR="${REPO_ROOT}/tmp"
 
@@ -37,26 +10,50 @@ readonly ISO_NAME="$TMP_DIR/polar-live-$(date +"%Y%m%d").iso"
 readonly ISO_NAME_LATEST="$TMP_DIR/polar-live-latest.iso"
 readonly IMAGE_FILE="$TMP_DIR/polar-live-$(date +"%Y%m%d").img"
 readonly IMAGE_FILE_LATEST_SYMLINK="$TMP_DIR/polar-live-latest.img"
-readonly BOOT_PARTITION_SIZE=512 # in MB
-readonly ROOT_PARTITION_KERNEL_SIZE=2304 # in MB
+readonly BOOT_PARTITION_SIZE=20 # in MB
+readonly ROOT_PARTITION_KERNEL_SIZE=200 # in MB (vmlinuz + initrd.img)
 readonly BOOT_MNT=/mnt/boot
 readonly ROOT_MNT="$TMP_DIR/mnt"
 LOOP_DEV_NAME="$TMP_DIR/loop_dev"
 
-readonly BINARY_FILE="$TMP_DIR/production-image-installer_latest.bin"
-
-#readonly SCRIPT_FILE="auto-install.sh"
-#readonly SERVICE_NAME="auto-install.service"
+BINARY_INSTALLER=$TMP_DIR/production-image-installer-latest.bin
 
 readonly ARCH=amd64
 readonly DISTRO=jammy
 readonly REPO="http://archive.ubuntu.com/ubuntu/"
-
-#readonly ROOTFS_PACKAGES="busybox linux-image-amd64 systemd-sysv pciutils usbutils passwd exfat-fuse exfat-utils"
+#readonly PACKAGES="busybox linux-image-amd64 systemd-sysv pciutils usbutils passwd exfat-fuse exfat-utils"
+readonly PACKAGES="systemd-sysv gdisk dosfstools pciutils passwd usbutils e2fsprogs vim coreutils bzip2"
 
 VMLINUZ=$TMP_DIR/rootfs/boot/vmlinuz
 INITRD=$TMP_DIR/rootfs/boot/initrd.img
 
+
+help()
+{
+cat << EOM
+Build Polar Live OS for flashing Box-PC's with SSD drive from USB.
+
+Usage:
+  ./build [--options]
+
+Options:
+  -h, --help        Show this help message.
+  --init            Install dependencies on host
+  --rootfs          Build rootfs and iso file.
+  --mkrootfs        Create root file system.
+  --mkiso           Generate the iso.
+  --kernel          Path to custom kernel.
+  --initrd          Path to custom initial ram disk.
+  --clean	        Delete rootfs.
+  --test-iso        Test the ISO with qemu.
+  --test-img        Test the IMG with qemu.
+  --all             Build rootfs, iso and run qemu test.
+
+Know issues:
+- stop at 'Chosen extractor for .deb packages: ar' - delete rootfs ==> use --clean
+- stop with 'tried to extract package, but file already exists. Exit.' ==> use --clean
+EOM
+}
 
 function root_check(){
     if [ "$EUID" -ne 0 ]; then
@@ -111,26 +108,38 @@ function umount_virtual_fs(){
     ! mountpoint -q $1/sys || umount $1/sys
 }
 
+# Mount/unmount virtual filesystems
+function mount_virtfs(){
+    ! mountpoint -q $ROOTFS_LIVE_DIR/dev     && mount --bind /dev     $ROOTFS_LIVE_DIR/dev
+    ! mountpoint -q $ROOTFS_LIVE_DIR/dev/pts && mount --bind /dev/pts $ROOTFS_LIVE_DIR/dev/pts
+    ! mountpoint -q $ROOTFS_LIVE_DIR/sys     && mount --bind /sys     $ROOTFS_LIVE_DIR/sys
+    ! mountpoint -q $ROOTFS_LIVE_DIR/proc    && mount -t proc /proc   $ROOTFS_LIVE_DIR/proc
+    echo "Virtual file systems mounted"
+}
+
+function unmount_virtfs() {
+    ! mountpoint -q $ROOTFS_LIVE_DIR/dev/pts || umount $ROOTFS_LIVE_DIR/dev/pts
+    ! mountpoint -q $ROOTFS_LIVE_DIR/dev     || umount $ROOTFS_LIVE_DIR/dev
+    ! mountpoint -q $ROOTFS_LIVE_DIR/sys     || umount $ROOTFS_LIVE_DIR/sys
+    ! mountpoint -q $ROOTFS_LIVE_DIR/proc    || umount $ROOTFS_LIVE_DIR/proc
+    echo "Virtual file systems unmounted"
+}
+
+# =======================
+# ROOTFS
+# =======================
+
 function create_rootfs(){
 
     mkdir -p $ROOTFS_LIVE_DIR
 
     debootstrap --variant=minbase --arch=$ARCH $DISTRO $ROOTFS_LIVE_DIR $REPO
+    mount_virtfs
 
-    # Mount virtual filesystems
-    mount --bind /dev $ROOTFS_LIVE_DIR/dev
-    mount --bind /proc $ROOTFS_LIVE_DIR/proc
-    mount --bind /sys $ROOTFS_LIVE_DIR/sys
+    # Configure rootfs
+    chroot $ROOTFS_LIVE_DIR apt update
+    chroot $ROOTFS_LIVE_DIR apt install -y --no-install-recommends $PACKAGES
 
-    mount_virtual_fs $ROOTFS_LIVE_DIR
-
-# Configure rootfs
-chroot $ROOTFS_LIVE_DIR /bin/bash <<EOF
-
-apt-get update
-apt-get install -y systemd-sysv gdisk dosfstools pciutils passwd usbutils e2fsprogs vim coreutils
-#apt-get --no-install-recommends install busybox linux-image-amd64 systemd-sysv pciutils usbutils passwd
-EOF
 
 ## Auto-Login
 chroot $ROOTFS_LIVE_DIR /bin/bash <<EOF
@@ -149,7 +158,7 @@ cat <<EOT > /lib/systemd/system/auto-install.service
 Description=Run auto-install script
 
 [Service]
-ExecStart=/root/production-image-installer_latest.bin
+ExecStart=/root/production-image-installer-latest.bin
 Type=oneshot
 
 [Install]
@@ -160,15 +169,31 @@ chmod 0644 /lib/systemd/system/auto-install.service
 ln -sf /lib/systemd/system/auto-install.service /etc/systemd/system/auto-install.service
 EOF
 
+## Auto-Login
+chroot $ROOTFS_LIVE_DIR /bin/bash <<EOF
+cat <<EOT > /etc/vconsole.conf
+KEYMAP=de
+EOT
+EOF
 
+    #
+    # TODO: tui menu - JIRA NPRO-145: Keep old config
+    #
 
     # Copy binary installer into rootfs
-    cp -v $BINARY_FILE $ROOTFS_LIVE_DIR/root/
-
-    # Unmount virtual filesystems
-    umount_virtual_fs $ROOTFS_LIVE_DIR
+    if [ ! -e $BINARY_INSTALLER ] ; then
+        echo "Binary Installer $BINARY_INSTALLER symlink not found!"
+    else
+        cp -v $BINARY_INSTALLER $ROOTFS_LIVE_DIR/root/ || echo "Failed to copy binary installer to image"
+    fi
+    
+    echo "Root FS was build successfully in $ROOTFS_LIVE_DIR."
 }
 
+
+# =======================
+# IMAGE
+# =======================
 function create_img(){
 
     echo "Create Polar Live OS Image ..."
@@ -189,7 +214,7 @@ function create_img(){
     readonly KBYTE=1024
     
     # calculate the size of the image file
-    DD_Count=$(echo "($BOOT_PARTITION_SIZE*$KBYTE)+$ROOT_PARTITION_SIZE+($ROOT_PARTITION_KERNEL_SIZE*$KBYTE)" | bc)
+    DD_Count=$(echo "$ROOT_PARTITION_SIZE+($ROOT_PARTITION_KERNEL_SIZE*$KBYTE)" | bc)
 
     # convert the size to human readable format just for display
     Image_Size=$((echo "$DD_Count*$KBYTE" | bc) | numfmt --to=si)
@@ -205,10 +230,10 @@ function create_img(){
         exit 1
     fi
 
-    # Create the partition table
-    sgdisk -g $IMAGE_FILE
-    sgdisk -n 1:2048:+${BOOT_PARTITION_SIZE}M -t 1:ef00 $IMAGE_FILE
-    sgdisk -n 2:0:0 -t 2:8300 $IMAGE_FILE
+
+    # create a MBR partition table
+    parted -s $IMAGE_FILE mklabel msdos
+    parted -s $IMAGE_FILE mkpart primary ext4 1MiB 100%
 
     # attach the image file to a loop device
     LOOP_DEV=$(losetup -fP --show $IMAGE_FILE)
@@ -219,8 +244,7 @@ function create_img(){
 
 
     # Create the file system
-    mkfs.vfat ${LOOP_DEV}p1 && echo "Boot partition created" || echo "Could not create boot partition."
-    mkfs.ext4 ${LOOP_DEV}p2 && echo "Rootfs partition created" || echo "Could not create rootfs partition."
+    mkfs.ext4 ${LOOP_DEV}p1 && echo "Rootfs partition created" || echo "Could not create rootfs partition."
 
 
 
@@ -232,7 +256,7 @@ function create_img(){
     # create rootfs mount directory
     mkdir -p $ROOT_MNT
     # mount rootfs partition
-    mount ${LOOP_DEV}p2 $ROOT_MNT
+    mount ${LOOP_DEV}p1 $ROOT_MNT
 
     if [ $? -ne 0 ]; then
         echo "ERROR: Could not mount rootfs partition."
@@ -240,45 +264,34 @@ function create_img(){
     fi
 
     #create efi boot directory
-    mkdir -p $ROOT_MNT/boot/efi
+    mkdir -p $ROOT_MNT/boot/grub
 
-    # mount efi boot partition
-    mount ${LOOP_DEV}p1 $ROOT_MNT/boot/efi
-
-    if [ $? -ne 0 ]; then
-        echo "ERROR: Could not mount efi boot partition."
-        exit 1
-    fi
-
+   
     echo "Image file mounted successfully."
 
     # copy the rootfs to the image file
-   cp -a $ROOTFS_LIVE_DIR/* $ROOT_MNT
+    cp -a $ROOTFS_LIVE_DIR/* $ROOT_MNT
 
-   #mount dev, proc and sys
+    #mount dev, proc and sys
     mount_virtual_fs $ROOT_MNT
 
+    # UEFI (needs more boot partion space: 512)
+    # grub-install --target=x86_64-efi --efi-directory=$ROOT_MNT/boot/efi --bootloader-id=UBUNTU --boot-directory=$ROOT_MNT/boot --recheck $LOOP_DEV
 
-  # copy the kernel and initrd to the boot partition
-  #  cp -v $VMLINUZ $ROOT_MNT/boot/vmlinuz &&  echo "Kernel copied successfully." || echo "Could not copy kernel."
-  #  cp -v $INITRD $ROOT_MNT/boot/initrd  && echo "Initrd copied successfully." || echo "Could not copy initrd."
-
-   # install grub
-    grub-install --target=x86_64-efi --efi-directory=$ROOT_MNT/boot/efi --bootloader-id=UBUNTU --boot-directory=$ROOT_MNT/boot --recheck $LOOP_DEV 
+    # install grub BIOS bootloader
+    grub-install --target=i386-pc --boot-directory=$ROOT_MNT/boot --recheck $LOOP_DEV
 
     if [ $? -ne 0 ]; then
         echo "ERROR: Could not install grub."
-        exit 1
+        clean_img
         
     else
         echo "Grub installed successfully."
     fi
 
     # get boot partition UUID
-    BOOT_UUID=$(blkid -s UUID -o value ${LOOP_DEV}p1)
+    ROOTFS_UUID=$(blkid -s UUID -o value ${LOOP_DEV}p1)
 
-    # get rootfs partition UUID
-    ROOTFS_UUID=$(blkid -s UUID -o value ${LOOP_DEV}p2)
 
     # update the grub configuration
 cat <<EOF > $ROOT_MNT/boot/grub/grub.cfg
@@ -287,7 +300,7 @@ cat <<EOF > $ROOT_MNT/boot/grub/grub.cfg
 
     menuentry "Install PolarOS" {
         linux /boot/vmlinuz root=UUID=$ROOTFS_UUID
-        initrd /boot/initrd
+        initrd /boot/initrd.img
 
     }
 EOF
@@ -296,22 +309,52 @@ EOF
 
 cat <<EOF > $ROOT_MNT/etc/fstab
     UUID=$ROOTFS_UUID / ext4 defaults 0 1
-    UUID=$BOOT_UUID /boot/efi vfat defaults 0 1
-
+   
 EOF
 
-    # Install kernel and initrd
-    if ! chroot $ROOT_MNT apt install -y linux-image-generic initramfs-tools; then
-        echo "ERROR: Could not install kernel and initrd."
-        clean_img
-    fi
+    # copy kernel and initrd
+    cp -v $VMLINUZ $ROOT_MNT/boot/ && echo "Kernel copied successfully." || echo "Could not copy kernel."
+    cp -v $INITRD $ROOT_MNT/boot/ && echo "Initrd copied successfully." || echo "Could not copy initrd."
 
     
     echo "Create symlink to latest image build for easy automation!"
-    chown $USER:$USER $IMAGE_FILE 
+    chown 1000:1000 $IMAGE_FILE 
     ln -sf $IMAGE_FILE $IMAGE_FILE_LATEST_SYMLINK
 
     echo "Image file created successfully."
+}
+
+
+
+# =======================
+# MAKE ISO (READ-ONLY)
+# =======================
+function create_iso(){
+
+    if !exist $ROOTFS; then 
+        echo "ERROR: RootFS does not exists. Run --rootfs first." && exit 1
+    fi
+
+cat <<EOF > $ROOTFS_LIVE_DIR/boot/grub/grub.cfg
+    set default=0
+    set timeout=0
+
+    menuentry "Install PolarOS" {
+        linux /boot/vmlinuz root=/dev/sr0
+        initrd /boot/initrd
+}
+EOF
+
+    grub-mkrescue -o $ISO_NAME $ROOTFS_LIVE_DIR && echo "ISO image $ISO_NAME created successfully." && ln -sf $ISO_NAME $ISO_NAME_LATEST
+}
+
+
+# =======================
+# CLEAN FUNCTIONS
+# =======================
+
+function clean_rootfs(){
+        sudo rm -rvf $ROOTFS_LIVE_DIR
 }
 
 function clean_img(){
@@ -319,7 +362,7 @@ function clean_img(){
     umount_virtual_fs $ROOT_MNT
     # Unmount the image file
     
-    ! mountpoint -q $ROOT_MNT/boot/efi || umount $ROOT_MNT/boot/efi
+    #! mountpoint -q $ROOT_MNT/boot/efi || umount $ROOT_MNT/boot/efi
     ! mountpoint -q $ROOT_MNT || umount $ROOT_MNT
 
     rm -rf $ROOT_MNT
@@ -331,43 +374,12 @@ function clean_img(){
     rm -rf $LOOP_DEV_NAME
 
     # remove the image file
-   # rm -rf $IMAGE_FILE
+    # rm -rf $IMAGE_FILE
 }
 
-function create_iso(){
-
-    if !exist $ROOTFS; then 
-        echo "ERROR: RootFS does not exists. Run --rootfs first." && exit 1
-    fi
-
-
-    # install linux kernel
-
-    
-  
-
-cat <<EOF > $ROOTFS_LIVE_DIR/boot/grub/grub.cfg
-set default=0
-set timeout=5
-
-menuentry "Install PolarOS" {
-    linux /boot/vmlinuz root=/dev/sr0
-    initrd /boot/initrd
-}
-EOF
-
-grub-mkrescue -o $ISO_NAME $ROOTFS_LIVE_DIR && echo "ISO image $ISO_NAME created successfully." && ln -sf $ISO_NAME $ISO_NAME_LATEST
-}
-
-
-function clean(){
-    ! mountpoint -q $ROOTFS_LIVE_DIR/dev  || umount $ROOTFS_LIVE_DIR/dev
-    ! mountpoint -q $ROOTFS_LIVE_DIR/proc || umount $ROOTFS_LIVE_DIR/proc
-    ! mountpoint -q $ROOTFS_LIVE_DIR/sys  || umount $ROOTFS_LIVE_DIR/sys
-
-    sudo rm -rvf $ROOTFS_LIVE_DIR
-}
-
+# =======================
+# Q-EMU TEST FUNCTIONS 
+# =======================
 function test_iso(){
     #qemu-system-x86_64 -enable-kvm -boot menu=on -m 4G -cpu host -smp 2 -curses -cdrom $ISO_NAME
     #qemu-system-x86_64 -boot menu=on -display curses -cdrom $ISO_NAME
@@ -377,11 +389,13 @@ function test_iso(){
 
 function test_img(){
     if ! test -f $IMAGE_FILE_LATEST_SYMLINK; then echo "No Image file found! Create image first with --img."; exit 1; fi
-    qemu-system-x86_64 -enable-kvm -bios /usr/share/ovmf/OVMF.fd -m 4G -cpu host -smp 2 -vga virtio -display sdl,gl=on -drive format=raw,file=$IMAGE_FILE_LATEST_SYMLINK
+    #UEFI:qemu-system-x86_64 -enable-kvm -boot menu=on -bios /usr/share/ovmf/OVMF.fd -m 4G -cpu host -smp 2 -vga virtio -display sdl,gl=on -drive format=raw,file=$IMAGE_FILE_LATEST_SYMLINK
+    qemu-system-x86_64 -enable-kvm -boot menu=on -m 4G -cpu host -smp 2 -vga virtio -display sdl,gl=on -drive format=raw,file=$IMAGE_FILE_LATEST_SYMLINK &
 }
 
-
-
+# =======================
+# MAIN CLI
+# =======================
 while [[ $# -gt 0 ]]; do
     argument="$1"
 
@@ -407,10 +421,15 @@ while [[ $# -gt 0 ]]; do
             shift
         ;;
 
+        --bin)
+            BINARY_INSTALLER=$1
+            shift
+        ;;
+
         --rootfs)
             root_check
             create_rootfs
-    
+            unmount_virtfs
             shift
         ;;
 
@@ -422,28 +441,24 @@ while [[ $# -gt 0 ]]; do
 
         ;;
 
-        --clean)
-            root_check
-            clean_img
-            exit 0
-
-        ;;
-
         --iso)
             root_check
             create_iso
             shift
         ;;
 
-        --clean)
+        --clean-rootfs)
             root_check
-            clean
-            shift
+            unmount_virtfs
+            clean_rootfs
+            exit 0
         ;;
 
-        --test-iso)
-            test_iso
-            shift
+        --clean-img)
+            root_check
+            unmount_virtfs
+            clean_img
+            exit 0
         ;;
 
         --test-img)
@@ -451,7 +466,16 @@ while [[ $# -gt 0 ]]; do
             shift
         ;;
 
-        --all)
+        --all-img)
+            root_check
+            create_rootfs
+            create_img
+            clean_img
+            test_img
+            shift
+        ;;
+
+        --all-iso)
             root_check
             clean
             create_rootfs
