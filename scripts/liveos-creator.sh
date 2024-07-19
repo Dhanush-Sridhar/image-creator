@@ -348,6 +348,12 @@ EOF
     grub-mkrescue -o $ISO_NAME $ROOTFS_LIVE_DIR && echo "ISO image $ISO_NAME created successfully." && ln -sf $ISO_NAME $ISO_NAME_LATEST
 }
 
+function compress_img(){
+
+    # compression with multi-threading
+    xz -vT3 $(readlink $IMAGE_FILE_LATEST_SYMLINK)
+}
+
 
 # =======================
 # CLEAN FUNCTIONS
@@ -460,6 +466,12 @@ while [[ $# -gt 0 ]]; do
             clean_img
             exit 0
         ;;
+
+        -c|--compress)
+            compress_img
+            exit 0
+        ;;
+
 
         --test-img)
             test_img
