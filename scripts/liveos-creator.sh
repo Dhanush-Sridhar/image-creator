@@ -24,8 +24,8 @@ readonly REPO="http://archive.ubuntu.com/ubuntu/"
 #readonly PACKAGES="busybox linux-image-amd64 systemd-sysv pciutils usbutils passwd exfat-fuse exfat-utils"
 readonly PACKAGES="systemd-sysv gdisk dosfstools pciutils passwd usbutils e2fsprogs vim coreutils bzip2"
 
-VMLINUZ=$TMP_DIR/rootfs/boot/vmlinuz
-INITRD=$TMP_DIR/rootfs/boot/initrd.img
+VMLINUZ=/boot/vmlinuz
+INITRD=/boot/initrd.img
 
 
 help()
@@ -480,7 +480,11 @@ while [[ $# -gt 0 ]]; do
 
         --all-img)
             root_check
+            unmount_virtfs
+            clean_rootfs
+            unmount_virtfs
             create_rootfs
+            unmount_virtfs
             create_img
             clean_img
             test_img
