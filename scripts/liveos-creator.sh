@@ -36,12 +36,12 @@ readonly ROOTFS_LIVE_DIR="$TMP_DIR/live-rootfs"
 readonly ISO_NAME="$TMP_DIR/polar-live-$(date +"%Y%m%d").iso"
 readonly ISO_NAME_LATEST="$TMP_DIR/polar-live-latest.iso"
 readonly IMAGE_FILE="$TMP_DIR/polar-live-$(date +"%Y%m%d").img"
+readonly IMAGE_FILE_LATEST_SYMLINK="$TMP_DIR/polar-live-latest.img"
 readonly BOOT_PARTITION_SIZE=512 # in MB
 readonly ROOT_PARTITION_KERNEL_SIZE=2304 # in MB
 readonly BOOT_MNT=/mnt/boot
 readonly ROOT_MNT="$TMP_DIR/mnt"
 LOOP_DEV_NAME="$TMP_DIR/loop_dev"
-
 
 readonly BINARY_FILE="$TMP_DIR/production-image-installer_latest.bin"
 
@@ -91,8 +91,9 @@ function check_host_setup(){
 }
 
 function host_setup(){
-  apt-get update
-  apt-get install -y debootstrap grub-pc-bin grub-efi-amd64-bin mtools xorriso
+  apt update
+  apt install -y debootstrap grub-pc-bin grub-efi-amd64-bin mtools xorriso 
+  apt install ovmf # for Q-EMU EFI Boot
 }
 
 
@@ -143,7 +144,7 @@ EOF
 
 ## Auto Install Service
 chroot $ROOTFS_LIVE_DIR /bin/bash <<EOF
-cat <<EOT > /etc/systemd/system/auto-install.service
+cat <<EOT > /lib/systemd/system/auto-install.service
 [Unit]
 Description=Run auto-install script
 
@@ -155,18 +156,22 @@ Type=oneshot
 WantedBy=multi-user.target
 EOT
 
-chmod 0644 /etc/systemd/system/auto-install.service
+chmod 0644 /lib/systemd/system/auto-install.service
+ln -sf /lib/systemd/system/auto-install.service /etc/systemd/system/auto-install.service
 EOF
 
 
-# Copy binary installer into rootfs
+
+    # Copy binary installer into rootfs
     cp -v $BINARY_FILE $ROOTFS_LIVE_DIR/root/
 
-# Unmount virtual filesystems
+    # Unmount virtual filesystems
     umount_virtual_fs $ROOTFS_LIVE_DIR
 }
 
 function create_img(){
+
+    echo "Create Polar Live OS Image ..."
 
     #check if rootfs exists
     if [ ! -d $ROOTFS_LIVE_DIR ]; then
@@ -301,6 +306,11 @@ EOF
         clean_img
     fi
 
+    
+    echo "Create symlink to latest image build for easy automation!"
+    chown $USER:$USER $IMAGE_FILE 
+    ln -sf $IMAGE_FILE $IMAGE_FILE_LATEST_SYMLINK
+
     echo "Image file created successfully."
 }
 
@@ -362,9 +372,14 @@ function test_iso(){
     #qemu-system-x86_64 -enable-kvm -boot menu=on -m 4G -cpu host -smp 2 -curses -cdrom $ISO_NAME
     #qemu-system-x86_64 -boot menu=on -display curses -cdrom $ISO_NAME
     if ! test -f $TMP_DIR/geshem.img; then echo "Test Image does not exists. Create one."; qemu-img create -f qcow virt-geshem.img 10G; fi
-
     qemu-system-x86_64 -enable-kvm -boot menu=on -m 4G -cpu host -smp 2 -vga virtio -display sdl,gl=on -drive file=virt-geshem.img -cdrom $ISO_NAME_LATEST
 }
+
+function test_img(){
+    if ! test -f $IMAGE_FILE_LATEST_SYMLINK; then echo "No Image file found! Create image first with --img."; exit 1; fi
+    qemu-system-x86_64 -enable-kvm -bios /usr/share/ovmf/OVMF.fd -m 4G -cpu host -smp 2 -vga virtio -display sdl,gl=on -drive format=raw,file=$IMAGE_FILE_LATEST_SYMLINK
+}
+
 
 
 while [[ $# -gt 0 ]]; do
@@ -426,8 +441,13 @@ while [[ $# -gt 0 ]]; do
             shift
         ;;
 
-        --test)
+        --test-iso)
             test_iso
+            shift
+        ;;
+
+        --test-img)
+            test_img
             shift
         ;;
 
