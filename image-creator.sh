@@ -26,7 +26,9 @@ function about() {
 ┌──────────────────────────────────────────────────┐
 │      Polar OS Image Creator                      │
 │ ------------------------------------------------ │
-│ Author:   Benjamin Federau, Suria Reddy          │
+│ Author:   Benjamin Federau                       │"
+│           Suria Reddy                            │"
+│           Dhanush Sridhar                        │"
 │ Version:  ${VERSION}                                  │
 │ ------------------------------------------------ │
 │ Purpose: Builds a Linux rootfs and installer     │
@@ -736,7 +738,7 @@ if [ "${IMAGE_TARGET_TYPE}" = "tarball" -o "${IMAGE_TARGET_TYPE}" = "installer" 
         chmod +x "${INSTALLER_BINARY}"
         chgrp $SUDO_GID "${INSTALLER_BINARY}"
         chown $SUDO_USER "${INSTALLER_BINARY}"
-        sudo -u $SUDO_USER ln -sf "${INSTALLER_BINARY}" "${TMP_PATH}/${IMAGE_TYPE}-image-installer_latest.bin"
+        sudo -u $SUDO_USER ln -sf "${INSTALLER_BINARY}" "${TMP_PATH}/${IMAGE_TYPE}-image-installer-latest.bin"
         ##echo installer done here...
         ##ls -l "${INSTALLER_BINARY}"
     fi

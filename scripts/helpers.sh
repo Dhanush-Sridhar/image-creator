@@ -45,26 +45,20 @@ if [ $UID != 0 ]; then
 fi
 }
 
-# mount virtual filesystems
-function mount_dev_sys_proc() 
-{
-    log "Mount dev, proc, sys to rootfs"
-    local _ROOTFS_PATH="$1"
-    [ -e "${_ROOTFS_PATH}" ] || errlog "Path ${_ROOTFS_PATH} not found!"
-    mount -o bind /dev "${_ROOTFS_PATH}/dev"
-    mount -o bind /dev/pts "${_ROOTFS_PATH}/dev/pts"
-    mount -o bind /sys "${_ROOTFS_PATH}/sys"
-    mount -t proc /proc "${_ROOTFS_PATH}/proc"
+###
+# Mount/unmount virtual filesystems
+# usage: mount_virtfs $ROOTFS_PATH
+###
+function mount_virtfs(){
+    ! mountpoint -q $1/dev     && mount --bind /dev     $1/dev
+    ! mountpoint -q $1/dev/pts && mount --bind /dev/pts $1/dev/pts
+    ! mountpoint -q $1/sys     && mount --bind /sys     $1/sys
+    ! mountpoint -q $1/proc    && mount -t proc /proc   $1/proc
 }
 
-# unmount virtual filesystems
-function umount_dev_sys_proc() 
-{
-    local _ROOTFS_PATH="$1"
-    log "Unmount dev, proc, sys from rootfs"
-    [ -e "${_ROOTFS_PATH}" ] || errlog "Path ${_ROOTFS_PATH} not found!"
-    umount "${_ROOTFS_PATH}/dev/pts"
-    umount "${_ROOTFS_PATH}/dev"
-    umount "${_ROOTFS_PATH}/sys"
-    umount "${_ROOTFS_PATH}/proc"
+function unmount_virtfs() {
+    ! mountpoint -q $1/dev/pts || umount $1/dev/pts
+    ! mountpoint -q $1/dev     || umount $1/dev
+    ! mountpoint -q $1/sys     || umount $1/sys
+    ! mountpoint -q $1/proc    || umount $1/proc
 }

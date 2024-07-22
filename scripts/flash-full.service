@@ -1,0 +1,10 @@
+[Unit]
+Description=Run auto-install script
+
+[Service]
+ExecStart=/root/production-image-installer_latest.bin
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target
+EOT
