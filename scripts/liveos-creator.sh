@@ -2,9 +2,17 @@
 
 set -eo pipefail
 
-readonly REPO_ROOT=$(git rev-parse --show-toplevel) 
-readonly TMP_DIR="${REPO_ROOT}/tmp"
+REPO_ROOT=$(git rev-parse --show-toplevel) 
 
+echo "Load configuration ..."
+BUILD_CONFIG=$REPO_ROOT/config/build.conf
+source $BUILD_CONFIG && echo "$BUILD_CONFIG was sourced!" || echo "Failed to source config: $BUILD_CONFIG"
+HELPER_FUNCTIONS=$REPO_ROOT/scripts/helpers.sh
+source $HELPER_FUNCTIONS && echo "$HELPER_FUNCTIONS was sourced!" || echo "Failed to source config: $BUILD_CONFIG"
+
+
+readonly TMP_DIR="${REPO_ROOT}/tmp"
+readonly ROOTFS_IMAGE_CREATOR_DIR="$TMP_DIR/rootfs"
 readonly ROOTFS_LIVE_DIR="$TMP_DIR/live-rootfs"
 readonly ISO_NAME="$TMP_DIR/polar-live-$(date +"%Y%m%d").iso"
 readonly ISO_NAME_LATEST="$TMP_DIR/polar-live-latest.iso"
@@ -19,13 +27,13 @@ LOOP_DEV_NAME="$TMP_DIR/loop_dev"
 BINARY_INSTALLER=$TMP_DIR/production-image-installer-latest.bin
 
 readonly ARCH=amd64
-readonly DISTRO=jammy
+#readonly DISTRO=jammy
 readonly REPO="http://archive.ubuntu.com/ubuntu/"
 #readonly PACKAGES="busybox linux-image-amd64 systemd-sysv pciutils usbutils passwd exfat-fuse exfat-utils"
 readonly PACKAGES="systemd-sysv gdisk dosfstools pciutils passwd usbutils e2fsprogs vim coreutils bzip2"
 
-VMLINUZ=/boot/vmlinuz
-INITRD=/boot/initrd.img
+VMLINUZ=$ROOTFS_IMAGE_CREATOR_DIR/boot/vmlinuz
+INITRD=$ROOTFS_IMAGE_CREATOR_DIR/boot/initrd.img
 
 
 help()
@@ -45,9 +53,10 @@ Options:
   --kernel          Path to custom kernel.
   --initrd          Path to custom initial ram disk.
   --clean	        Delete rootfs.
+  -c | --compress   Compress Image  # TODO: choose with option: gzip, xz, zip
   --test-iso        Test the ISO with qemu.
   --test-img        Test the IMG with qemu.
-  --all             Build rootfs, iso and run qemu test.
+  --all-img         Build rootfs, iso and run qemu test.
 
 Know issues:
 - stop at 'Chosen extractor for .deb packages: ar' - delete rootfs ==> use --clean
@@ -468,7 +477,7 @@ while [[ $# -gt 0 ]]; do
         ;;
 
         -c|--compress)
-            compress_img
+            compress_img # TODO: choose with option: gzip, xz, zip
             exit 0
         ;;
 
