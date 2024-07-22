@@ -472,6 +472,7 @@ while [[ $# -gt 0 ]]; do
             root_check
             clean
             create_rootfs
+            unmount_virtfs $ROOTFS_LIVE_DIR
             create_iso
             test_iso
             shift
