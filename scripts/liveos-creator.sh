@@ -147,6 +147,12 @@ chmod 0644 /lib/systemd/system/auto-install.service
 ln -sf /lib/systemd/system/auto-install.service /etc/systemd/system/auto-install.service
 EOF
 
+# enable auto-install systemd service
+chroot $ROOTFS_LIVE_DIR /bin/bash <<EOF
+systemctl enable auto-install.service
+EOF
+
+
 ## Auto-Login
 chroot $ROOTFS_LIVE_DIR /bin/bash <<EOF
 cat <<EOT > /etc/vconsole.conf
