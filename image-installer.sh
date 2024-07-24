@@ -74,22 +74,18 @@ function umount_dev_sys_proc() {
 
 function create_partitions() {
     local _IMAGE_TARGET="$1"
-    local _BOOT_PARTITION="$2"
-    local _ROOTFS_PARTITION="$3"
-    local _DATAFS_PARTITION="$4"
+   
+    local _ROOTFS_PARTITION="$2"
+    local _DATAFS_PARTITION="$3"
 
     step_log "### Create partitions for ${_IMAGE_TARGET} ###"
-    sgdisk -Z ${_IMAGE_TARGET}
 
-    # boot partition
-    sgdisk -n 1:2048:18431 -t 1:EF02 ${_IMAGE_TARGET}
-    # rootfs partition
-    sgdisk -n 2:18432:15917054 -t 2:8300 ${_IMAGE_TARGET}
-    # Datafs partition
-    DEVICE_END_SECTOR=$(sgdisk -E ${_IMAGE_TARGET})
-    sgdisk -n 3:15917056:${DEVICE_END_SECTOR} -t 3:8300 ${_IMAGE_TARGET}
+     #use parted insted of sgdisk
+    parted -s ${_IMAGE_TARGET} mklabel msdos  
+    parted -s ${_IMAGE_TARGET} mkpart primary ext4 1MiB 10GiB
+    parted -s ${_IMAGE_TARGET} mkpart primary ext4 10GiB 100%
 
-    wipefs -a ${_BOOT_PARTITION}
+   
     wipefs -a ${_ROOTFS_PARTITION}
     wipefs -a ${_DATAFS_PARTITION}
 
@@ -144,11 +140,11 @@ mkdir -p "${ROOTFS_PATH}"
 
 ####################### Main #######################
 
-BOOT_PARTITION="${IMAGE_TARGET}1"
-ROOTFS_PARTITION="${IMAGE_TARGET}2"
-DATAFS_PARTITION="${IMAGE_TARGET}3"
 
-create_partitions "${IMAGE_TARGET}" "${BOOT_PARTITION}" "${ROOTFS_PARTITION}" "${DATAFS_PARTITION}"
+ROOTFS_PARTITION="${IMAGE_TARGET}1"
+DATAFS_PARTITION="${IMAGE_TARGET}2"
+
+create_partitions "${IMAGE_TARGET}" "${ROOTFS_PARTITION}" "${DATAFS_PARTITION}"
 
 mount "${ROOTFS_PARTITION}" "${ROOTFS_PATH}" || error "Could not mount ${ROOTFS_PARTITION} to ${ROOTFS_PATH}!"
 mkdir -p "${DATAFS_PATH}"
@@ -175,7 +171,7 @@ EOF
 
 step_log "## Install bootloader ##"
 chmod -x "${ROOTFS_PATH}/etc/grub.d/30_os-prober"
-chroot "${ROOTFS_PATH}" grub-install --force ${IMAGE_TARGET}
+grub-install --target=i386-pc --boot-directory=$ROOTFS_PATH/boot --recheck $IMAGE_TARGET
 chroot "${ROOTFS_PATH}" update-grub
 
 umount_dev_sys_proc "${ROOTFS_PATH}"
