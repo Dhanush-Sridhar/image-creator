@@ -80,6 +80,14 @@ function create_partitions() {
 
     step_log "### Create partitions for ${_IMAGE_TARGET} ###"
 
+    if [ ! -b "${_IMAGE_TARGET}" ]
+    then
+        error "${_IMAGE_TARGET} block device not found! check Hardware!"
+    fi
+
+    ls ${_ROOTFS_PARTITION} && wipefs -a ${_ROOTFS_PARTITION}
+    ls ${_DATAFS_PARTITION} && wipefs -a ${_DATAFS_PARTITION}
+
      #use parted insted of sgdisk
     parted -s ${_IMAGE_TARGET} mklabel msdos  
     parted -s ${_IMAGE_TARGET} mkpart primary ext4 1MiB 10GiB
@@ -140,6 +148,7 @@ mkdir -p "${ROOTFS_PATH}"
 
 ROOTFS_PARTITION="${IMAGE_TARGET}1"
 DATAFS_PARTITION="${IMAGE_TARGET}2"
+
 
 create_partitions "${IMAGE_TARGET}" "${ROOTFS_PARTITION}" "${DATAFS_PARTITION}"
 
