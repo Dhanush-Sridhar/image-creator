@@ -10,7 +10,7 @@ source $BUILD_CONFIG && echo "$BUILD_CONFIG was sourced!" || echo "Failed to sou
 HELPER_FUNCTIONS=$REPO_ROOT/scripts/helpers.sh
 source $HELPER_FUNCTIONS && echo "$HELPER_FUNCTIONS was sourced!" || echo "Failed to source config: $BUILD_CONFIG"
 
-
+readonly LIVE_SYS_DISTRO="jammy"
 readonly TMP_DIR="${REPO_ROOT}/tmp"
 readonly ROOTFS_IMAGE_CREATOR_DIR="$TMP_DIR/rootfs"
 readonly ROOTFS_LIVE_DIR="$TMP_DIR/live-rootfs"
@@ -19,7 +19,7 @@ readonly ISO_NAME_LATEST="$TMP_DIR/polar-live-latest.iso"
 readonly IMAGE_FILE="$TMP_DIR/polar-live-$(date +"%Y%m%d").img"
 readonly IMAGE_FILE_LATEST_SYMLINK="$TMP_DIR/polar-live-latest.img"
 readonly BOOT_PARTITION_SIZE=20 # in MB
-readonly ROOT_PARTITION_KERNEL_SIZE=200 # in MB (vmlinuz + initrd.img)
+readonly ROOT_PARTITION_KERNEL_SIZE=2600 # in MB (vmlinuz + initrd.img)
 readonly BOOT_MNT=/mnt/boot
 readonly ROOT_MNT="$TMP_DIR/mnt"
 LOOP_DEV_NAME="$TMP_DIR/loop_dev"
@@ -30,7 +30,7 @@ readonly ARCH=amd64
 #readonly DISTRO=jammy
 readonly REPO="http://archive.ubuntu.com/ubuntu/"
 #readonly PACKAGES="busybox linux-image-amd64 systemd-sysv pciutils usbutils passwd exfat-fuse exfat-utils"
-readonly PACKAGES="systemd-sysv gdisk dosfstools pciutils passwd usbutils e2fsprogs vim coreutils bzip2"
+readonly PACKAGES="systemd-sysv gdisk dosfstools pciutils passwd usbutils e2fsprogs vim coreutils bzip2 parted locales"
 
 VMLINUZ=$ROOTFS_IMAGE_CREATOR_DIR/boot/vmlinuz
 INITRD=$ROOTFS_IMAGE_CREATOR_DIR/boot/initrd.img
@@ -111,7 +111,7 @@ function create_rootfs(){
 
     mkdir -p $ROOTFS_LIVE_DIR
 
-    debootstrap --variant=minbase --arch=$ARCH $DISTRO $ROOTFS_LIVE_DIR $REPO
+    debootstrap --variant=minbase --arch=$ARCH $LIVE_SYS_DISTRO $ROOTFS_LIVE_DIR $REPO
     mount_virtfs $ROOTFS_LIVE_DIR
 
     # Configure rootfs
@@ -148,9 +148,9 @@ ln -sf /lib/systemd/system/auto-install.service /etc/systemd/system/auto-install
 EOF
 
 # enable auto-install systemd service
-chroot $ROOTFS_LIVE_DIR /bin/bash <<EOF
-systemctl enable auto-install.service
-EOF
+#chroot $ROOTFS_LIVE_DIR /bin/bash <<EOF
+#systemctl enable auto-install.service
+#EOF
 
 
 ## Auto-Login
@@ -259,8 +259,12 @@ function create_img(){
     #mount dev, proc and sys
     mount_virtfs $ROOT_MNT
 
-    # UEFI (needs more boot partion space: 512)
-    # grub-install --target=x86_64-efi --efi-directory=$ROOT_MNT/boot/efi --bootloader-id=UBUNTU --boot-directory=$ROOT_MNT/boot --recheck $LOOP_DEV
+    #Install Kernal 
+    if ! chroot $ROOT_MNT apt install -y linux-image-generic; then
+        echo "ERROR: Could not install kernel."
+       clean_img
+       exit 1
+    fi
 
     # install grub BIOS bootloader
     grub-install --target=i386-pc --boot-directory=$ROOT_MNT/boot --recheck $LOOP_DEV
@@ -296,11 +300,7 @@ cat <<EOF > $ROOT_MNT/etc/fstab
    
 EOF
 
-    # copy kernel and initrd
-    cp -v $VMLINUZ $ROOT_MNT/boot/ && echo "Kernel copied successfully." || echo "Could not copy kernel."
-    cp -v $INITRD $ROOT_MNT/boot/ && echo "Initrd copied successfully." || echo "Could not copy initrd."
 
-    
     echo "Create symlink to latest image build for easy automation!"
     chown 1000:1000 $IMAGE_FILE 
     ln -sf $IMAGE_FILE $IMAGE_FILE_LATEST_SYMLINK
