@@ -30,7 +30,14 @@ readonly ARCH=amd64
 #readonly DISTRO=jammy
 readonly REPO="http://archive.ubuntu.com/ubuntu/"
 #readonly PACKAGES="busybox linux-image-amd64 systemd-sysv pciutils usbutils passwd exfat-fuse exfat-utils"
-readonly PACKAGES="systemd-sysv gdisk dosfstools pciutils passwd usbutils e2fsprogs vim coreutils bzip2 parted locales"
+readonly PACKAGES="systemd-sysv gdisk dosfstools pciutils passwd usbutils e2fsprogs vim coreutils bzip2 parted locales fbset whiptail"
+
+readonly  STARTUP_SCRIPT_SOURCE=$REPO_ROOT/scripts/tui/tui_main_menu.sh
+readonly  STARTUP_SCRIPT=tui_main_menu.sh
+
+readonly INSTALLER_SOURCE=$REPO_ROOT/scripts/installer/production-image-installer-latest.bin
+readonly INSTALLER_BIN=production-image-installer-latest.bin
+
 
 VMLINUZ=$ROOTFS_IMAGE_CREATOR_DIR/boot/vmlinuz
 INITRD=$ROOTFS_IMAGE_CREATOR_DIR/boot/initrd.img
@@ -125,7 +132,7 @@ mkdir - /etc/systemd/system/getty@tty1.service.d
 cat <<EOT > /etc/systemd/system/getty@tty1.service.d/autologin.conf
 [Service]
 ExecStart=
-ExecStart=-/sbin/agetty -o '-p -f -- \\u' --noclear --autologin root %I $TERM
+ExecStart=-/sbin/agetty -o '-p -f -- \\u' --noclear --autologin root --login-program $STARTUP_SCRIPT -i $INSTALLER_BIN %I $TERM
 EOT
 EOF
 
@@ -159,6 +166,16 @@ cat <<EOT > /etc/vconsole.conf
 KEYMAP=de
 EOT
 EOF
+
+    # copy TUI scripts to opt
+    if [ ! -e $STARTUP_SCRIPT_SOURCE ] ; then
+        echo "TUI scripts $STARTUP_SCRIPT_SOURCE not found!"
+        return 1
+    fi
+
+    cp -v $STARTUP_SCRIPT_SOURCE $ROOTFS_LIVE_DIR/root/ || echo "Failed to copy TUI scripts to image"
+
+   
 
     #
     # TODO: tui menu - JIRA NPRO-145: Keep old config
