@@ -17,6 +17,31 @@ ERRORLOG="${SCRIPTDIR}/error.log"
 BACKTITLE="Polar Image Flasher 1.0"
 WIDTH=70
 
+# Options for production and Service scripts 
+
+PRODUCTION_SCRIPT=""
+SERVICE_SCRIPT=""
+
+# Parse options
+while getopts "p:s:" opt; do
+  case $opt in
+    p)
+      PRODUCTION_SCRIPT="$OPTARG"
+      ;;
+    s)
+      SERVICE_SCRIPT="$OPTARG"
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      exit 1
+      ;;
+  esac
+done
+
 # ===========================
 # FRAMEBUFFER RESOLUTION
 # ===========================
@@ -162,20 +187,16 @@ function main()
 ### FOR PRODUCTION ###
 function flash_production()
 {
-    systemMsg "This is the production flash"   
+    systemMsg "This is the production flash $PRODUCTION_SCRIPT"   
 }
 
 ### FLASH SYSTEM PARTITION ONLY ### 
 ### FOR SERVICE UPDATE ###
 function flash_service()
 {
-    systemMsg "This is the service flash"   
+    systemMsg "This is the service flash $SERVICE_SCRIPT"   
 }
 
-function flash_service()
-{
-    echo "This is the service flash"   
-}
 
 # mount image repo 
 function mount_home()
