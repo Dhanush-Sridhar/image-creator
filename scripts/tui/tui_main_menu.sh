@@ -17,19 +17,15 @@ ERRORLOG="${SCRIPTDIR}/error.log"
 BACKTITLE="Polar Image Flasher 1.0"
 WIDTH=70
 
-# Options for production and Service scripts 
+# Options INSTALLER Bin name
 
-PRODUCTION_SCRIPT=""
-SERVICE_SCRIPT=""
+INSTALLER_BIN=""
 
 # Parse options
-while getopts "p:s:" opt; do
+while getopts "i:" opt; do
   case $opt in
-    p)
-      PRODUCTION_SCRIPT="$OPTARG"
-      ;;
-    s)
-      SERVICE_SCRIPT="$OPTARG"
+    i)
+      INSTALLER_BIN="$OPTARG"
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
@@ -151,7 +147,8 @@ function main()
         
 	    if [ $? -eq 0 ]; then 
             flash_production
-            systemMsg "Production flash completed. remove the USB and reboot the system."
+            systemMsg "Production flash completed.  The system will shutdown now. please remove the USB and press the power button to boot the system."
+            shutdown
         else
             main
         fi
@@ -164,7 +161,8 @@ function main()
         
 	    if [ $? -eq 0 ]; then 
             flash_service
-            systemMsg "Service flash completed. remove the USB and reboot the system."
+            systemMsg "Service flash completed. The system will shutdown now. please remove the USB and press the power button to boot the system."
+            shutdown
         else
             main
         fi
@@ -187,38 +185,17 @@ function main()
 ### FOR PRODUCTION ###
 function flash_production()
 {
-    systemMsg "This is the production flash $PRODUCTION_SCRIPT"   
+ systemMsg "This is the production flash $INSTALLER_BIN"
+    ./$INSTALLER_BIN
 }
 
 ### FLASH SYSTEM PARTITION ONLY ### 
 ### FOR SERVICE UPDATE ###
 function flash_service()
 {
-    systemMsg "This is the service flash $SERVICE_SCRIPT"   
+    systemMsg "This is the service flash $INSTALLER_BIN"   
+    ./$INSTALLER_BIN
 }
-
-
-# mount image repo 
-function mount_home()
-{
-    REPO=/dev/sdb4
-    TO=/mnt/usb
-    mkdir -p $TO && \
-    mount $REPO $TO && \
-    log "Mounting $REPO to $TO ..."
-}
-
-# decompress and flash - system partition only
-function flash_sda2()
-{
-    FROM="$1"
-    TO=/dev/sda2
-    log "Flashing $FROM to $TO ..."
-    cat $FROM | gunzip -c | partclone.ext4 -N -d -r -s - -o $TO && \
-    log "Flashing $FROM to $TO succesful."
-}
-
-
 
 
 
