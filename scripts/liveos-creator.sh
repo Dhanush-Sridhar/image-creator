@@ -132,32 +132,12 @@ mkdir - /etc/systemd/system/getty@tty1.service.d
 cat <<EOT > /etc/systemd/system/getty@tty1.service.d/autologin.conf
 [Service]
 ExecStart=
-ExecStart=-/sbin/agetty -o '-p -f -- \\u' --noclear --autologin root --login-program $STARTUP_SCRIPT -i $INSTALLER_BIN %I $TERM
+ExecStart=-/sbin/agetty -o '-p -f -- \\u' --noclear --autologin root %I $TERM
 EOT
 EOF
 
-## Auto Install Service
-chroot $ROOTFS_LIVE_DIR /bin/bash <<EOF
-cat <<EOT > /lib/systemd/system/auto-install.service
-[Unit]
-Description=Run auto-install script
-
-[Service]
-ExecStart=/root/production-image-installer-latest.bin
-Type=oneshot
-
-[Install]
-WantedBy=multi-user.target
-EOT
-
-chmod 0644 /lib/systemd/system/auto-install.service
-ln -sf /lib/systemd/system/auto-install.service /etc/systemd/system/auto-install.service
-EOF
-
-# enable auto-install systemd service
-#chroot $ROOTFS_LIVE_DIR /bin/bash <<EOF
-#systemctl enable auto-install.service
-#EOF
+## Start TUI Menu on Login
+echo ./$STARTUP_SCRIPT -i $INSTALLER_BIN >>  $ROOTFS_LIVE_DIR/root/.bashrc
 
 
 ## Auto-Login
@@ -174,12 +154,6 @@ EOF
     fi
 
     cp -v $STARTUP_SCRIPT_SOURCE $ROOTFS_LIVE_DIR/root/ || echo "Failed to copy TUI scripts to image"
-
-   
-
-    #
-    # TODO: tui menu - JIRA NPRO-145: Keep old config
-    #
 
     # Copy binary installer into rootfs
     if [ ! -e $BINARY_INSTALLER ] ; then
@@ -301,7 +275,7 @@ function create_img(){
     # update the grub configuration
 cat <<EOF > $ROOT_MNT/boot/grub/grub.cfg
     set default=0
-    set timeout=5
+    set timeout=0
 
     menuentry "Install PolarOS" {
         linux /boot/vmlinuz root=UUID=$ROOTFS_UUID
