@@ -125,7 +125,9 @@ export NEWT_COLORS=$REDBLUE
 # MAIN MENU
 # ===========================
 MAIN_MENU_TITLE=" Flash Menu"
-INFOTEXT="You will flash the entire system partition with a new image. Customer data will remain on the data partition.\n\n\n"
+INFOTEXT=" Welcome to Polar Image Flasher! \n
+Please select the desired option from the menu below. \n\n\n"
+             
 
 function main()
 {
