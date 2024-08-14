@@ -209,6 +209,12 @@ function flash_service()
         return 1
     fi
 
+    mountDataPartition
+
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
     rsync -avz  /mnt/data/ /data/ 
     if [ $? -ne 0 ]; then
         errorbox "Failed to copy data partition"
@@ -228,7 +234,7 @@ function flash_service()
 }
 
 
-function mountData(){
+function mountDataPartition(){
 
     partitions=$(lsblk -o NAME,FSTYPE -n /dev/sda)
 
