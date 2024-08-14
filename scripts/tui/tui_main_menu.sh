@@ -147,13 +147,13 @@ function main()
             THIS WILL ERASE CUSTOMER DATA.\n\n\n
             Do you want to continue?"
         
-	    if [ $? -eq 0 ]; then 
-            flash_production
-            systemMsg "Production flash completed.  The system will shutdown now. please remove the USB and press the power button to boot the system."
-            shutdown
-        else
+	    if [ $? -ne 0 ]; then 
             main
         fi
+
+        flash_production
+        infobox "Production flash completed.  The system will shutdown now. please remove the USB and press the power button to boot the system."
+        /sbin/poweroff
         
         ;;
     2)
@@ -161,13 +161,21 @@ function main()
          Customer data will remain on the data partition.\n\n\n\
              Do you want to continue?"
         
-	    if [ $? -eq 0 ]; then 
-            flash_service
-            systemMsg "Service flash completed. The system will shutdown now. please remove the USB and press the power button to boot the system."
-            shutdown
-        else
+	    if [ $? -ne 0 ]; then 
             main
         fi
+
+        flash_service
+
+        if [ $? -ne 0 ]; then
+            main
+        fi  
+
+       
+
+        infobox "Service flash sucessfully completed. The system will shutdown now. please remove the USB and press the power button to boot the system."
+        
+        /sbin/poweroff
         
         ;;
     3)
@@ -187,7 +195,7 @@ function main()
 ### FOR PRODUCTION ###
 function flash_production()
 {
- systemMsg "This is the production flash $INSTALLER_BIN"
+ 
     ./$INSTALLER_BIN
 }
 
@@ -195,10 +203,68 @@ function flash_production()
 ### FOR SERVICE UPDATE ###
 function flash_service()
 {
-    systemMsg "This is the service flash $INSTALLER_BIN"   
+    create_data_partion
+
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    rsync -avz  /mnt/data/ /data/ 
+    if [ $? -ne 0 ]; then
+        errorbox "Failed to copy data partition"
+        return 1
+    fi
+
     ./$INSTALLER_BIN
+
+    rsync /data/ /mnt/data/ 
+    if [ $? -ne 0 ]; then
+        errorbox "Failed to restore data partition"
+        return 1
+    fi
+
+    umount /data
+    return 0
 }
 
+
+function mountData(){
+
+    partitions=$(lsblk -o NAME,FSTYPE -n /dev/sda)
+
+    # Loop through each partition
+    while read -r line; do
+    
+    fstype=$(echo $line | awk '{print $2}')
+
+    # Check if the partition type is vfat
+    if [ "$fstype" == "vfat" ]; then
+        partition=$(echo $line | awk '{print $1}' |sed 's/.*─\(.*\)/\1/' )
+        echo "Partition $partition is of type vfat."
+    fi
+    done <<< "$partitions"
+
+    if [ -z "$partition" ]; then
+        errorbox "No vfat partition found."
+        return 1
+    fi
+
+    mkdir -p /mnt/data  # Create a mount point
+
+    if [ $? -ne 0 ]; then
+        errorbox "Failed to create mount point."
+        return 1
+    fi
+
+    mount $partition /mnt/data  # Mount the partition
+
+    if [ $? -ne 0 ]; then
+        errorbox "Failed to mount partition."
+        return 1
+    fi
+
+    return 0
+}
 
 
 
@@ -270,6 +336,52 @@ function reboot()
     fi
 }
 
+
+function create_data_partion(){
+
+
+# check if there is enough space to create a data partition
+
+    
+
+    PARTITION=$(findmnt -n -o SOURCE /)
+    DEVICE=$(echo $PARTITION | sed 's/p[0-9]*$//')
+
+
+
+    echo "Found partition: $PARTITION" 
+    echo "Device: $DEVICE" 
+
+    TOTAL_DISK_SIZE=$(lsblk -bno SIZE $DEVICE)
+    echo "Total disk size: $TOTAL_DISK_SIZE bytes" 
+
+    
+    let MINIMUN_DISK_SIZE = 7 * 1024 * 1024 * 1024 # 7GB
+
+    if [ $TOTAL_DISK_SIZE -lt MINIMUN_DISK_SIZE ]; then
+        errorbox "Not enough space to create a data partition, please use USB with at least 8GB of space." 
+        return 1
+    fi
+
+    # Create data partition
+    echo "Creating data partition"
+    parted -s $DEVICE mkpart primary fat32 100%
+
+    # Get the new partition name (assuming it's the next available partition number)
+    NEW_PARTITION="${DEVICE}$(lsblk -no NAME $DEVICE | grep -o '[0-9]*$' | tail -n 1)"
+    echo "New partition: $NEW_PARTITION" 
+
+    mkfs.fat -F32 $NEW_PARTITION
+
+    mkdir -p /data
+
+    mount $NEW_PARTITION /data
+
+    return 0
+
+
+
+}
 # ===========================
 # MAIN LOOP
 # ===========================
