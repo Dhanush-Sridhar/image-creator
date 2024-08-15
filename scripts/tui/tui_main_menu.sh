@@ -221,13 +221,22 @@ function flash_service()
         return 1
     fi
 
+    umount /mnt/data
+
     ./$INSTALLER_BIN
+
+    mountDataPartition
+
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
 
     rsync /data/ /mnt/data/ 
     if [ $? -ne 0 ]; then
         errorbox "Failed to restore data partition"
         return 1
     fi
+    umount /mnt/data
 
     umount /data
     return 0
@@ -235,25 +244,10 @@ function flash_service()
 
 
 function mountDataPartition(){
-
-    partitions=$(lsblk -o NAME,FSTYPE -n /dev/sda)
+    DISK="/dev/sda"
+    partitions=/dev/$(lsblk -no NAME $DISK | tail -n 1 | sed 's/.*-\(.*\)/\1/')
 
     # Loop through each partition
-    while read -r line; do
-    
-    fstype=$(echo $line | awk '{print $2}')
-
-    # Check if the partition type is vfat
-    if [ "$fstype" == "vfat" ]; then
-        partition=$(echo $line | awk '{print $1}' |sed 's/.*─\(.*\)/\1/' )
-        echo "Partition $partition is of type vfat."
-    fi
-    done <<< "$partitions"
-
-    if [ -z "$partition" ]; then
-        errorbox "No vfat partition found."
-        return 1
-    fi
 
     mkdir -p /mnt/data  # Create a mount point
 
@@ -348,33 +342,34 @@ function create_data_partion(){
 
 # check if there is enough space to create a data partition
 
-    
+
 
     PARTITION=$(findmnt -n -o SOURCE /)
-    DEVICE=$(echo $PARTITION | sed 's/p[0-9]*$//')
+    DEVICE=$(echo $PARTITION | sed 's/[0-9]//g')
 
 
 
     echo "Found partition: $PARTITION" 
     echo "Device: $DEVICE" 
 
-    TOTAL_DISK_SIZE=$(lsblk -bno SIZE $DEVICE)
+    TOTAL_FREE_DISK_SIZE=$(parted -m $DEVICE unit b print free | tail -n 1 | awk -F: '{print $3}')
     echo "Total disk size: $TOTAL_DISK_SIZE bytes" 
 
-    
-    let MINIMUN_DISK_SIZE = 7 * 1024 * 1024 * 1024 # 7GB
 
-    if [ $TOTAL_DISK_SIZE -lt MINIMUN_DISK_SIZE ]; then
-        errorbox "Not enough space to create a data partition, please use USB with at least 8GB of space." 
+    MINIMUN_DISK_SIZE=$((4 * 1024 * 1024 * 1024)) # 4GB
+
+    if [ $TOTAL_FREE_DISK_SIZE -lt $MINIMUN_DISK_SIZE ]; then
+        errorbox "Not enough space to create a data partition, please use USB with at least 8GB of space.\n required $TOTAL_DISK_SIZE actual $MINIMUM_DISK_SIZE"
         return 1
     fi
 
     # Create data partition
     echo "Creating data partition"
-    parted -s $DEVICE mkpart primary fat32 100%
+    START=$(parted -m $DEVICE unit MB print free | tail -n 1 | awk -F: '{print $2}')
+    parted -s $DEVICE mkpart primary fat32 ${START}MB 100%
 
     # Get the new partition name (assuming it's the next available partition number)
-    NEW_PARTITION="${DEVICE}$(lsblk -no NAME $DEVICE | grep -o '[0-9]*$' | tail -n 1)"
+    NEW_PARTITION="/dev/$(lsblk -no NAME $DEVICE | tail -n 1 | sed 's/.*-\(.*\)/\1/')"
     echo "New partition: $NEW_PARTITION" 
 
     mkfs.fat -F32 $NEW_PARTITION
@@ -384,6 +379,7 @@ function create_data_partion(){
     mount $NEW_PARTITION /data
 
     return 0
+
 
 
 
