@@ -131,6 +131,7 @@ Please select the desired option from the menu below. \n\n\n"
 
 function main()
 {
+    log "Main menu displayed"
     CHOICE=$(
         whiptail --backtitle "${BACKTITLE}" \
         --title "${MAIN_MENU_TITLE}" --menu \
@@ -143,6 +144,7 @@ function main()
 
     case $CHOICE in
     1)
+        log "Production flash selected"
         systemConfirmation "WARNING: You are about to flash the entire disk.\n\n
             THIS WILL ERASE CUSTOMER DATA.\n\n\n
             Do you want to continue?"
@@ -150,13 +152,15 @@ function main()
 	    if [ $? -ne 0 ]; then 
             main
         fi
-
-        flash_production
-        infobox "Production flash completed.  The system will shutdown now. please remove the USB and press the power button to boot the system."
-        /sbin/poweroff
         
+        flash_production
+        log "Production flash sucessfully completed"
+        infobox "Production flash completed.  The system will shutdown now. please remove the USB and press the power button to boot the system."
+        log "Shutting down....."
+        /sbin/poweroff
         ;;
     2)
+        log "Service flash selected"
         systemConfirmation "WARNING: You are about to flash the system partition only.\n\
          Customer data will remain on the data partition.\n\n\n\
              Do you want to continue?"
@@ -164,24 +168,23 @@ function main()
 	    if [ $? -ne 0 ]; then 
             main
         fi
-
+        log "Starting service flash"
         flash_service
-
         if [ $? -ne 0 ]; then
             main
         fi  
-
        
-
+        log "Service flash sucessfully completed"
         infobox "Service flash sucessfully completed. The system will shutdown now. please remove the USB and press the power button to boot the system."
-        
+        log "Shutting down....."
         /sbin/poweroff
-        
         ;;
     3)
+        log "Shutdown selected"
         shutdown
         ;;
     *)
+        log "Invalid option selected"
         exit
         ;;
     esac
@@ -195,7 +198,7 @@ function main()
 ### FOR PRODUCTION ###
 function flash_production()
 {
- 
+    log "Starting production flash"
     ./$INSTALLER_BIN
 }
 
@@ -203,21 +206,25 @@ function flash_production()
 ### FOR SERVICE UPDATE ###
 function flash_service()
 {
+    log "Starting service flash"
     create_data_partion
 
     if [ $? -ne 0 ]; then
+
         return 1
     fi
 
     mountDataPartition
 
     if [ $? -ne 0 ]; then
+        errorlog "Failed to mount data partition "
         return 1
     fi
 
     rsync -avz  /mnt/data/ /data/ 
     if [ $? -ne 0 ]; then
-        errorbox "Failed to copy data partition"
+        errorlog "rsync failed to  backup data partition. ERROR ID : $?"
+        errorbox "Failed to copy data partition. Error ID : $?"
         return 1
     fi
 
@@ -228,12 +235,14 @@ function flash_service()
     mountDataPartition
 
     if [ $? -ne 0 ]; then
+        errorlog "Failed to mount data partition "
         return 1
     fi
 
-    rsync /data/ /mnt/data/ 
+    rsync -avz /data/ /mnt/data/ 
     if [ $? -ne 0 ]; then
-        errorbox "Failed to restore data partition"
+        errorlog "rsync failed to  restore data partition. ERROR ID : $?"
+        errorbox "Failed to restore data partition. Error ID : $?"
         return 1
     fi
     umount /mnt/data
@@ -252,6 +261,7 @@ function mountDataPartition(){
     mkdir -p /mnt/data  # Create a mount point
 
     if [ $? -ne 0 ]; then
+        errorlog "Failed to create mount point."
         errorbox "Failed to create mount point."
         return 1
     fi
@@ -259,6 +269,7 @@ function mountDataPartition(){
     mount $partition /mnt/data  # Mount the partition
 
     if [ $? -ne 0 ]; then
+        errorlog "Failed to mount partition."
         errorbox "Failed to mount partition."
         return 1
     fi
@@ -301,7 +312,7 @@ function infobox()
 function errorbox()
 {
     whiptail --title "ERROR" --msgbox "\n$*" 0 0
-    errorlog "$*"
+    
 }
 
 ### Log functions ###
@@ -339,16 +350,18 @@ function reboot()
 
 function create_data_partion(){
 
+    log "Creating data partition"
 
-# check if there is enough space to create a data partition
+    # check if there is enough space to create a data partition
 
 
 
     PARTITION=$(findmnt -n -o SOURCE /)
     DEVICE=$(echo $PARTITION | sed 's/[0-9]//g')
+    
 
 
-
+    log "Creating Data Partion on USB Device : $DEVICE mounted on $PARTITION"
     echo "Found partition: $PARTITION" 
     echo "Device: $DEVICE" 
 
@@ -359,6 +372,7 @@ function create_data_partion(){
     MINIMUN_DISK_SIZE=$((4 * 1024 * 1024 * 1024)) # 4GB
 
     if [ $TOTAL_FREE_DISK_SIZE -lt $MINIMUN_DISK_SIZE ]; then
+        errorlog "ERROR : Not enough space to create a data partition.  required $TOTAL_DISK_SIZE actual $MINIMUM_DISK_SIZE"
         errorbox "Not enough space to create a data partition, please use USB with at least 8GB of space.\n required $TOTAL_DISK_SIZE actual $MINIMUM_DISK_SIZE"
         return 1
     fi
@@ -366,7 +380,14 @@ function create_data_partion(){
     # Create data partition
     echo "Creating data partition"
     START=$(parted -m $DEVICE unit MB print free | tail -n 1 | awk -F: '{print $2}')
-    parted -s $DEVICE mkpart primary fat32 ${START}MB 100%
+    log "Creating data partition starting at $START MB"
+    parted -s $DEVICE mkpart primary fat32 ${START}MB 100% >> $TUILOG 2>&1
+
+    if [ $? -ne 0 ]; then
+        errorlog " ERROR : error in parted"
+        errorbox "partion creation failed \n $TUILOG"
+        return 1
+    fi
 
     # Get the new partition name (assuming it's the next available partition number)
     NEW_PARTITION="/dev/$(lsblk -no NAME $DEVICE | tail -n 1 | sed 's/.*-\(.*\)/\1/')"
@@ -387,4 +408,5 @@ function create_data_partion(){
 # ===========================
 # MAIN LOOP
 # ===========================
+log "Starting TUI"
 main
