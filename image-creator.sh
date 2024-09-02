@@ -488,7 +488,7 @@ if [ "${DISTRO_ID}" = "ubuntu" ]; then
     done
     
     if [ "${IMAGE_TYPE}" != "installation" ]; then
-        chroot ${ROOTFS_PATH} ${APT_CMD} update
+        chroot ${ROOTFS_PATH} ${APT_CMD} update 
         chroot ${ROOTFS_PATH} ${APT_CMD} -y install software-properties-common
         #chroot ${ROOTFS_PATH} add-apt-repository -y ppa:beineri/opt-qt-${QT_VERSION}-${DISTRO}
     fi
@@ -679,8 +679,14 @@ echo -e "ALL\tALL =(ALL) NOPASSWD: /sbin/hwclock" >> ${ROOTFS_PATH}/etc/sudoers
 echo -e "## ---\n" >> ${ROOTFS_PATH}/etc/sudoers
 chroot "${ROOTFS_PATH}" chmod -w /etc/sudoers
 
-
-
+# ===============================================
+#  Install Kernel
+# ===============================================
+if ! chroot "${ROOTFS_PATH}" ${APT_CMD} install -y linux-image-generic; then
+    echo "ERROR: Could not install kernel."
+    umount_dev_sys_proc "${ROOTFS_PATH}"
+    exit 1
+fi
 
 # ===============================================
 # OPTION: ENTER CHROOT

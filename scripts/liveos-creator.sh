@@ -10,7 +10,7 @@ source $BUILD_CONFIG && echo "$BUILD_CONFIG was sourced!" || echo "Failed to sou
 HELPER_FUNCTIONS=$REPO_ROOT/scripts/helpers.sh
 source $HELPER_FUNCTIONS && echo "$HELPER_FUNCTIONS was sourced!" || echo "Failed to source config: $BUILD_CONFIG"
 
-
+readonly LIVE_SYS_DISTRO="jammy"
 readonly TMP_DIR="${REPO_ROOT}/tmp"
 readonly ROOTFS_IMAGE_CREATOR_DIR="$TMP_DIR/rootfs"
 readonly ROOTFS_LIVE_DIR="$TMP_DIR/live-rootfs"
@@ -19,7 +19,7 @@ readonly ISO_NAME_LATEST="$TMP_DIR/polar-live-latest.iso"
 readonly IMAGE_FILE="$TMP_DIR/polar-live-$(date +"%Y%m%d").img"
 readonly IMAGE_FILE_LATEST_SYMLINK="$TMP_DIR/polar-live-latest.img"
 readonly BOOT_PARTITION_SIZE=20 # in MB
-readonly ROOT_PARTITION_KERNEL_SIZE=200 # in MB (vmlinuz + initrd.img)
+readonly ROOT_PARTITION_KERNEL_SIZE=2600 # in MB (vmlinuz + initrd.img)
 readonly BOOT_MNT=/mnt/boot
 readonly ROOT_MNT="$TMP_DIR/mnt"
 LOOP_DEV_NAME="$TMP_DIR/loop_dev"
@@ -30,7 +30,14 @@ readonly ARCH=amd64
 #readonly DISTRO=jammy
 readonly REPO="http://archive.ubuntu.com/ubuntu/"
 #readonly PACKAGES="busybox linux-image-amd64 systemd-sysv pciutils usbutils passwd exfat-fuse exfat-utils"
-readonly PACKAGES="systemd-sysv gdisk dosfstools pciutils passwd usbutils e2fsprogs vim coreutils bzip2"
+readonly PACKAGES="systemd-sysv gdisk dosfstools pciutils passwd usbutils e2fsprogs vim coreutils bzip2 parted locales fbset whiptail"
+
+readonly  STARTUP_SCRIPT_SOURCE=$REPO_ROOT/scripts/tui/tui_main_menu.sh
+readonly  STARTUP_SCRIPT=tui_main_menu.sh
+
+readonly INSTALLER_SOURCE=$REPO_ROOT/scripts/installer/production-image-installer-latest.bin
+readonly INSTALLER_BIN=production-image-installer-latest.bin
+
 
 VMLINUZ=$ROOTFS_IMAGE_CREATOR_DIR/boot/vmlinuz
 INITRD=$ROOTFS_IMAGE_CREATOR_DIR/boot/initrd.img
@@ -103,37 +110,6 @@ function host_setup(){
 }
 
 
-function mount_virtual_fs(){
-    # Mount virtual filesystems
-    mount --bind /dev $1/dev
-    mount --bind /proc $1/proc
-    mount --bind /sys $1/sys
-}
-
-function umount_virtual_fs(){
-    # Unmount virtual filesystems
-    ! mountpoint -q $1/dev || umount $1/dev
-    ! mountpoint -q $1/proc || umount $1/proc
-    ! mountpoint -q $1/sys || umount $1/sys
-}
-
-# Mount/unmount virtual filesystems
-function mount_virtfs(){
-    ! mountpoint -q $ROOTFS_LIVE_DIR/dev     && mount --bind /dev     $ROOTFS_LIVE_DIR/dev
-    ! mountpoint -q $ROOTFS_LIVE_DIR/dev/pts && mount --bind /dev/pts $ROOTFS_LIVE_DIR/dev/pts
-    ! mountpoint -q $ROOTFS_LIVE_DIR/sys     && mount --bind /sys     $ROOTFS_LIVE_DIR/sys
-    ! mountpoint -q $ROOTFS_LIVE_DIR/proc    && mount -t proc /proc   $ROOTFS_LIVE_DIR/proc
-    echo "Virtual file systems mounted"
-}
-
-function unmount_virtfs() {
-    ! mountpoint -q $ROOTFS_LIVE_DIR/dev/pts || umount $ROOTFS_LIVE_DIR/dev/pts
-    ! mountpoint -q $ROOTFS_LIVE_DIR/dev     || umount $ROOTFS_LIVE_DIR/dev
-    ! mountpoint -q $ROOTFS_LIVE_DIR/sys     || umount $ROOTFS_LIVE_DIR/sys
-    ! mountpoint -q $ROOTFS_LIVE_DIR/proc    || umount $ROOTFS_LIVE_DIR/proc
-    echo "Virtual file systems unmounted"
-}
-
 # =======================
 # ROOTFS
 # =======================
@@ -142,8 +118,8 @@ function create_rootfs(){
 
     mkdir -p $ROOTFS_LIVE_DIR
 
-    debootstrap --variant=minbase --arch=$ARCH $DISTRO $ROOTFS_LIVE_DIR $REPO
-    mount_virtfs
+    debootstrap --variant=minbase --arch=$ARCH $LIVE_SYS_DISTRO $ROOTFS_LIVE_DIR $REPO
+    mount_virtfs $ROOTFS_LIVE_DIR
 
     # Configure rootfs
     chroot $ROOTFS_LIVE_DIR apt update
@@ -160,23 +136,9 @@ ExecStart=-/sbin/agetty -o '-p -f -- \\u' --noclear --autologin root %I $TERM
 EOT
 EOF
 
-## Auto Install Service
-chroot $ROOTFS_LIVE_DIR /bin/bash <<EOF
-cat <<EOT > /lib/systemd/system/auto-install.service
-[Unit]
-Description=Run auto-install script
+## Start TUI Menu on Login
+echo ./$STARTUP_SCRIPT -i $INSTALLER_BIN >>  $ROOTFS_LIVE_DIR/root/.bashrc
 
-[Service]
-ExecStart=/root/production-image-installer-latest.bin
-Type=oneshot
-
-[Install]
-WantedBy=multi-user.target
-EOT
-
-chmod 0644 /lib/systemd/system/auto-install.service
-ln -sf /lib/systemd/system/auto-install.service /etc/systemd/system/auto-install.service
-EOF
 
 ## Auto-Login
 chroot $ROOTFS_LIVE_DIR /bin/bash <<EOF
@@ -185,9 +147,13 @@ KEYMAP=de
 EOT
 EOF
 
-    #
-    # TODO: tui menu - JIRA NPRO-145: Keep old config
-    #
+    # copy TUI scripts to opt
+    if [ ! -e $STARTUP_SCRIPT_SOURCE ] ; then
+        echo "TUI scripts $STARTUP_SCRIPT_SOURCE not found!"
+        return 1
+    fi
+
+    cp -v $STARTUP_SCRIPT_SOURCE $ROOTFS_LIVE_DIR/root/ || echo "Failed to copy TUI scripts to image"
 
     # Copy binary installer into rootfs
     if [ ! -e $BINARY_INSTALLER ] ; then
@@ -213,7 +179,7 @@ function create_img(){
         exit 1
     fi
     # just in case if not unmounted in previous run
-    umount_virtual_fs $ROOTFS_LIVE_DIR
+    unmount_virtfs $ROOTFS_LIVE_DIR
 
     #get the size of the rootfs directory
     ROOT_PARTITION_SIZE=$(du -s $ROOTFS_LIVE_DIR | awk '{print $1}')
@@ -282,10 +248,14 @@ function create_img(){
     cp -a $ROOTFS_LIVE_DIR/* $ROOT_MNT
 
     #mount dev, proc and sys
-    mount_virtual_fs $ROOT_MNT
+    mount_virtfs $ROOT_MNT
 
-    # UEFI (needs more boot partion space: 512)
-    # grub-install --target=x86_64-efi --efi-directory=$ROOT_MNT/boot/efi --bootloader-id=UBUNTU --boot-directory=$ROOT_MNT/boot --recheck $LOOP_DEV
+    #Install Kernal 
+    if ! chroot $ROOT_MNT apt install -y linux-image-generic; then
+        echo "ERROR: Could not install kernel."
+       clean_img
+       exit 1
+    fi
 
     # install grub BIOS bootloader
     grub-install --target=i386-pc --boot-directory=$ROOT_MNT/boot --recheck $LOOP_DEV
@@ -305,7 +275,7 @@ function create_img(){
     # update the grub configuration
 cat <<EOF > $ROOT_MNT/boot/grub/grub.cfg
     set default=0
-    set timeout=5
+    set timeout=0
 
     menuentry "Install PolarOS" {
         linux /boot/vmlinuz root=UUID=$ROOTFS_UUID
@@ -321,11 +291,7 @@ cat <<EOF > $ROOT_MNT/etc/fstab
    
 EOF
 
-    # copy kernel and initrd
-    cp -v $VMLINUZ $ROOT_MNT/boot/ && echo "Kernel copied successfully." || echo "Could not copy kernel."
-    cp -v $INITRD $ROOT_MNT/boot/ && echo "Initrd copied successfully." || echo "Could not copy initrd."
 
-    
     echo "Create symlink to latest image build for easy automation!"
     chown 1000:1000 $IMAGE_FILE 
     ln -sf $IMAGE_FILE $IMAGE_FILE_LATEST_SYMLINK
@@ -374,7 +340,7 @@ function clean_rootfs(){
 
 function clean_img(){
 
-    umount_virtual_fs $ROOT_MNT
+    unmount_virtfs $ROOT_MNT
     # Unmount the image file
     
     #! mountpoint -q $ROOT_MNT/boot/efi || umount $ROOT_MNT/boot/efi
@@ -405,7 +371,7 @@ function test_iso(){
 function test_img(){
     if ! test -f $IMAGE_FILE_LATEST_SYMLINK; then echo "No Image file found! Create image first with --img."; exit 1; fi
     #UEFI:qemu-system-x86_64 -enable-kvm -boot menu=on -bios /usr/share/ovmf/OVMF.fd -m 4G -cpu host -smp 2 -vga virtio -display sdl,gl=on -drive format=raw,file=$IMAGE_FILE_LATEST_SYMLINK
-    qemu-system-x86_64 -enable-kvm -boot menu=on -m 4G -cpu host -smp 2 -vga virtio -display sdl,gl=on -drive format=raw,file=$IMAGE_FILE_LATEST_SYMLINK &
+    qemu-system-x86_64  -boot menu=on -m 4G  -smp 2 -vga virtio -display sdl,gl=on -drive format=raw,file=$IMAGE_FILE_LATEST_SYMLINK
 }
 
 # =======================
@@ -444,7 +410,7 @@ while [[ $# -gt 0 ]]; do
         --rootfs)
             root_check
             create_rootfs
-            unmount_virtfs
+            unmount_virtfs $ROOTFS_LIVE_DIR
             shift
         ;;
 
@@ -464,14 +430,14 @@ while [[ $# -gt 0 ]]; do
 
         --clean-rootfs)
             root_check
-            unmount_virtfs
+            unmount_virtfs $ROOTFS_LIVE_DIR
             clean_rootfs
             exit 0
         ;;
 
         --clean-img)
             root_check
-            unmount_virtfs
+            unmount_virtfs $ROOT_MNT
             clean_img
             exit 0
         ;;
@@ -489,11 +455,10 @@ while [[ $# -gt 0 ]]; do
 
         --all-img)
             root_check
-            unmount_virtfs
+            unmount_virtfs $ROOTFS_LIVE_DIR
             clean_rootfs
-            unmount_virtfs
             create_rootfs
-            unmount_virtfs
+            unmount_virtfs $ROOTFS_LIVE_DIR
             create_img
             clean_img
             test_img
@@ -504,6 +469,7 @@ while [[ $# -gt 0 ]]; do
             root_check
             clean
             create_rootfs
+            unmount_virtfs $ROOTFS_LIVE_DIR
             create_iso
             test_iso
             shift
