@@ -10,7 +10,6 @@ source $BUILD_CONFIG && echo "$BUILD_CONFIG was sourced!" || echo "Failed to sou
 HELPER_FUNCTIONS=$REPO_ROOT/scripts/helpers.sh
 source $HELPER_FUNCTIONS && echo "$HELPER_FUNCTIONS was sourced!" || echo "Failed to source config: $BUILD_CONFIG"
 
-readonly LIVE_SYS_DISTRO="jammy"
 readonly TMP_DIR="${REPO_ROOT}/tmp"
 readonly ROOTFS_IMAGE_CREATOR_DIR="$TMP_DIR/rootfs"
 readonly ROOTFS_LIVE_DIR="$TMP_DIR/live-rootfs"
@@ -22,27 +21,18 @@ readonly BOOT_PARTITION_SIZE=20 # in MB
 readonly ROOT_PARTITION_KERNEL_SIZE=2600 # in MB (vmlinuz + initrd.img)
 readonly BOOT_MNT=/mnt/boot
 readonly ROOT_MNT="$TMP_DIR/mnt"
-LOOP_DEV_NAME="$TMP_DIR/loop_dev"
 
-BINARY_INSTALLER=$TMP_DIR/production-image-installer-latest.bin
-
-readonly ARCH=amd64
-#readonly DISTRO=jammy
-readonly REPO="http://archive.ubuntu.com/ubuntu/"
-#readonly PACKAGES="busybox linux-image-amd64 systemd-sysv pciutils usbutils passwd exfat-fuse exfat-utils"
-readonly PACKAGES="systemd-sysv gdisk dosfstools pciutils passwd usbutils e2fsprogs vim coreutils bzip2 parted locales fbset whiptail"
-
-readonly  STARTUP_SCRIPT_SOURCE=$REPO_ROOT/scripts/tui/tui_main_menu.sh
-readonly  STARTUP_SCRIPT=tui_main_menu.sh
-
-readonly INSTALLER_SOURCE=$REPO_ROOT/scripts/installer/production-image-installer-latest.bin
+readonly BINARY_INSTALLER=$TMP_DIR/production-image-installer-latest.bin
 readonly INSTALLER_BIN=production-image-installer-latest.bin
 
+readonly PACKAGES="systemd-sysv gdisk dosfstools pciutils passwd usbutils e2fsprogs vim coreutils bzip2 parted locales fbset whiptail rsync"
 
-VMLINUZ=$ROOTFS_IMAGE_CREATOR_DIR/boot/vmlinuz
-INITRD=$ROOTFS_IMAGE_CREATOR_DIR/boot/initrd.img
+readonly  STARTUP_SCRIPT_SOURCE_PATH=$REPO_ROOT/scripts/tui/tui_main_menu.sh
+readonly  STARTUP_SCRIPT_NAME=tui_main_menu.sh
 
+LOOP_DEV_NAME="$TMP_DIR/loop_dev"
 
+# =======================
 help()
 {
 cat << EOM
@@ -78,15 +68,6 @@ function root_check(){
     fi
 }
 
-function get_kernel(){
-    echo "Use custom kernel ..."
-    VMLINUZ="$2"
-}
-
-function get_initrd(){
-    echo "Use custom initrd ..."
-    INITRD="$2"
-}
 
 # Install dependecies on host
 function check_host_setup(){
@@ -117,8 +98,8 @@ function host_setup(){
 function create_rootfs(){
 
     mkdir -p $ROOTFS_LIVE_DIR
-
-    debootstrap --variant=minbase --arch=$ARCH $LIVE_SYS_DISTRO $ROOTFS_LIVE_DIR $REPO
+    echo "Create RootFS of $DISTRO in $ROOTFS_LIVE_DIR "
+    debootstrap --variant=minbase --arch=$ARCH $DISTRO $ROOTFS_LIVE_DIR $REPO
     mount_virtfs $ROOTFS_LIVE_DIR
 
     # Configure rootfs
@@ -137,7 +118,7 @@ EOT
 EOF
 
 ## Start TUI Menu on Login
-echo ./$STARTUP_SCRIPT -i $INSTALLER_BIN >>  $ROOTFS_LIVE_DIR/root/.bashrc
+echo ./$STARTUP_SCRIPT_NAME -i $INSTALLER_BIN >>  $ROOTFS_LIVE_DIR/root/.bashrc
 
 
 ## Auto-Login
@@ -148,12 +129,12 @@ EOT
 EOF
 
     # copy TUI scripts to opt
-    if [ ! -e $STARTUP_SCRIPT_SOURCE ] ; then
-        echo "TUI scripts $STARTUP_SCRIPT_SOURCE not found!"
+    if [ ! -e $STARTUP_SCRIPT_SOURCE_PATH ] ; then
+        echo "TUI scripts $STARTUP_SCRIPT_SOURCE_PATH not found!"
         return 1
     fi
 
-    cp -v $STARTUP_SCRIPT_SOURCE $ROOTFS_LIVE_DIR/root/ || echo "Failed to copy TUI scripts to image"
+    cp -v $STARTUP_SCRIPT_SOURCE_PATH $ROOTFS_LIVE_DIR/root/ || echo "Failed to copy TUI scripts to image"
 
     # Copy binary installer into rootfs
     if [ ! -e $BINARY_INSTALLER ] ; then
@@ -250,16 +231,8 @@ function create_img(){
     #mount dev, proc and sys
     mount_virtfs $ROOT_MNT
 
-    #Install Kernal 
-    if ! chroot $ROOT_MNT apt install -y linux-image-generic; then
-        echo "ERROR: Could not install kernel."
-       clean_img
-       exit 1
-    fi
-
-    # install grub BIOS bootloader
+     # install grub BIOS bootloader
     grub-install --target=i386-pc --boot-directory=$ROOT_MNT/boot --recheck $LOOP_DEV
-
     if [ $? -ne 0 ]; then
         echo "ERROR: Could not install grub."
         clean_img
@@ -268,11 +241,7 @@ function create_img(){
         echo "Grub installed successfully."
     fi
 
-    # get boot partition UUID
-    ROOTFS_UUID=$(blkid -s UUID -o value ${LOOP_DEV}p1)
-
-
-    # update the grub configuration
+        # update the grub configuration
 cat <<EOF > $ROOT_MNT/boot/grub/grub.cfg
     set default=0
     set timeout=0
@@ -283,6 +252,23 @@ cat <<EOF > $ROOT_MNT/boot/grub/grub.cfg
 
     }
 EOF
+
+    #Install Kernal 
+    if ! chroot $ROOT_MNT apt install -y linux-image-generic; then
+        echo "ERROR: Could not install kernel."
+       clean_img
+       exit 1
+    fi
+
+   
+
+    
+
+    # get boot partition UUID
+    ROOTFS_UUID=$(blkid -s UUID -o value ${LOOP_DEV}p1)
+
+
+
     
     # configure fstab
 

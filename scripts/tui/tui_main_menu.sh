@@ -245,6 +245,8 @@ function flash_service()
         errorbox "Failed to restore data partition. Error ID : $?"
         return 1
     fi
+    mkdir -p /mnt/data/logs
+    cp $TUILOG /mnt/data/logs/tui.log
     umount /mnt/data
 
     umount /data
@@ -254,7 +256,7 @@ function flash_service()
 
 function mountDataPartition(){
     DISK="/dev/sda"
-    partitions=/dev/$(lsblk -no NAME $DISK | tail -n 1 | sed 's/.*-\(.*\)/\1/')
+    partition=/dev/$(lsblk -no NAME $DISK | tail -n 1 | sed 's/.*-\(.*\)/\1/')
 
     # Loop through each partition
 
@@ -358,15 +360,24 @@ function create_data_partion(){
 
     PARTITION=$(findmnt -n -o SOURCE /)
     DEVICE=$(echo $PARTITION | sed 's/[0-9]//g')
-    
+    NUMBER_OF_PARTITIONS=$(lsblk -lno NAME $DEVICE | wc -l)
+    log "Number of partitions: $NUMBER_OF_PARTITIONS"
+
+    while [ $NUMBER_OF_PARTITIONS -gt 2 ]; do
+        DELETE_PARTITION_NUMBER=$((NUMBER_OF_PARTITIONS - 1))
+        log "Removing existing partitions: $DELETE_PARTITION_NUMBER"
+        parted -s $DEVICE rm $DELETE_PARTITION_NUMBER  >> $TUILOG 2>&1
+        NUMBER_OF_PARTITIONS=$(lsblk -lno NAME $DEVICE | wc -l)
+    done
 
 
     log "Creating Data Partion on USB Device : $DEVICE mounted on $PARTITION"
-    echo "Found partition: $PARTITION" 
-    echo "Device: $DEVICE" 
+    log "Found partition: $PARTITION" 
+    log "Device: $DEVICE" 
 
-    TOTAL_FREE_DISK_SIZE=$(parted -m $DEVICE unit b print free | tail -n 1 | awk -F: '{print $3}')
-    echo "Total disk size: $TOTAL_DISK_SIZE bytes" 
+    
+    TOTAL_FREE_DISK_SIZE=$(parted -m $DEVICE unit b print free | tail -n 1 | awk -F: '{print $3}' | sed 's/B//g') 
+    log "Total disk size: $TOTAL_FREE_DISK_SIZE bytes" 
 
 
     MINIMUN_DISK_SIZE=$((4 * 1024 * 1024 * 1024)) # 4GB
