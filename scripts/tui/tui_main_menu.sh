@@ -14,8 +14,29 @@ TUILOG="${SCRIPTDIR}/tui.log"
 ERRORLOG="${SCRIPTDIR}/error.log"
 
 # TUI VARS
-BACKTITLE="Geshem Flasher 1.0"
+BACKTITLE="Polar Image Flasher 1.0"
 WIDTH=70
+
+# Options INSTALLER Bin name
+
+INSTALLER_BIN=""
+
+# Parse options
+while getopts "i:" opt; do
+  case $opt in
+    i)
+      INSTALLER_BIN="$OPTARG"
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      exit 1
+      ;;
+  esac
+done
 
 # ===========================
 # FRAMEBUFFER RESOLUTION
@@ -103,8 +124,10 @@ export NEWT_COLORS=$REDBLUE
 # ===========================
 # MAIN MENU
 # ===========================
-MAIN_MENU_TITLE="Service Flash Menu"
-INFOTEXT="You will flash the entire system partition with a new image. Customer data will remain on the data partition.\n\n\n"
+MAIN_MENU_TITLE=" Flash Menu"
+INFOTEXT=" Welcome to Polar Image Flasher! \n
+Please select the desired option from the menu below. \n\n\n"
+             
 
 function main()
 {
@@ -113,120 +136,68 @@ function main()
         --title "${MAIN_MENU_TITLE}" --menu \
         "${INFOTEXT}" \
         --ok-button "Select" 16 ${WIDTH} 0 \
-            1 "Flash (System Partition)" \
-            2 "Shutdown" \
+            1 "Flash Production (Entire Partition)" \
+            2 "Flash Service (System Partition)" \
+            3 "Shutdown" \
             3>&2 2>&1 1>&3 )
 
     case $CHOICE in
     1)
-        flash_service
+        systemConfirmation "WARNING: You are about to flash the entire disk.\n\n
+            THIS WILL ERASE CUSTOMER DATA.\n\n\n
+            Do you want to continue?"
+        
+	    if [ $? -eq 0 ]; then 
+            flash_production
+            systemMsg "Production flash completed.  The system will shutdown now. please remove the USB and press the power button to boot the system."
+            shutdown
+        else
+            main
+        fi
+        
         ;;
     2)
+        systemConfirmation "WARNING: You are about to flash the system partition only.\n\
+         Customer data will remain on the data partition.\n\n\n\
+             Do you want to continue?"
+        
+	    if [ $? -eq 0 ]; then 
+            flash_service
+            systemMsg "Service flash completed. The system will shutdown now. please remove the USB and press the power button to boot the system."
+            shutdown
+        else
+            main
+        fi
+        
+        ;;
+    3)
         shutdown
         ;;
     *)
         exit
         ;;
     esac
+  
 }
-
 
 # ===========================
 # FLASH MENU
 # ===========================
+### FLASH ENTIRE DISK ###
+### FOR PRODUCTION ###
+function flash_production()
+{
+ systemMsg "This is the production flash $INSTALLER_BIN"
+    ./$INSTALLER_BIN
+}
+
 ### FLASH SYSTEM PARTITION ONLY ### 
 ### FOR SERVICE UPDATE ###
-
 function flash_service()
 {
-    if mount | grep -w /data > /dev/null; then
-        STARTDIR="/data"
-        EXTENSION="*.gz"
-        filebrowser "Filebrowser" "$STARTDIR" "$EXTENSION"
-        echo "Selected image: $FILE_SELECTED"
-        echo "Selected image path: $FILE_SELECTED_PATH"
-        flash_sda2 $FILE_SELECTED_PATH && infobox "Flashing successful. I am going to reboot now!" && reboot
-    else
-        filebrowser "Testbrowser" 
-        cat $FILE_SELECTED
-    fi        
+    systemMsg "This is the service flash $INSTALLER_BIN"   
+    ./$INSTALLER_BIN
 }
-
-# mount image repo 
-function mount_home()
-{
-    REPO=/dev/sdb4
-    TO=/mnt/usb
-    mkdir -p $TO && \
-    mount $REPO $TO && \
-    log "Mounting $REPO to $TO ..."
-}
-
-# decompress and flash - system partition only
-function flash_sda2()
-{
-    FROM="$1"
-    TO=/dev/sda2
-    log "Flashing $FROM to $TO ..."
-    cat $FROM | gunzip -c | partclone.ext4 -N -d -r -s - -o $TO && \
-    log "Flashing $FROM to $TO succesful."
-}
-
-# ===========================
-# HELPERS - FILEBROWSER
-# ===========================
-
-
-function filebrowser
-{
-    local TITLE=${1:-$MSG_INFO_TITLE}
-    local LOCAL_PATH=${2:-$(pwd)}        #default: ${2:-$(pwd)}
-    local FILE_MASK=${3:-"*"}        #default: ${3:-"*"}
-    local ALLOW_BACK=${4:-yes}
-    local FILES=()
-
-    [ "$ALLOW_BACK" != "no" ] && FILES+=(".." "..")
-
-    # First add folders
-    for DIR in $(find $LOCAL_PATH -maxdepth 1 -mindepth 1 -type d -printf "%f " 2> /dev/null)
-    do
-        FILES+=($DIR "folder")
-    done
-
-    # Then add the files
-    for FILE in $(find $LOCAL_PATH -maxdepth 1 -type f -name "$FILE_MASK" -printf "%f %s " 2> /dev/null)
-    do
-        FILES+=($FILE)
-    done
-
-    while true
-    do
-        FILE_SELECTED=$(whiptail --clear --backtitle "$BACK_TITLE" --title "$TITLE" --menu "$LOCAL_PATH" 16 $WIDTH 0 ${FILES[@]} 3>&1 1>&2 2>&3)
-
-        if [ -z "$FILE_SELECTED" ]; then
-            return 1
-        else
-            if [ "$FILE_SELECTED" = ".." ] && [ "$ALLOW_BACK" != "no" ]; then
-                return 0
-
-            elif [ -d "$LOCAL_PATH/$FILE_SELECTED" ] ; then
-                if filebrowser "$TITLE" "$LOCAL_PATH/$FILE_SELECTED" "$FILE_MASK" "yes" ; then
-                    if [ "$FILE_SELECTED" != ".." ]; then
-                        return 0
-                    fi
-                else
-                    return 1
-                fi
-
-            elif [ -f "$LOCAL_PATH/$FILE_SELECTED" ] ; then
-                FILE_SELECTED="$FILE_SELECTED"
-                FILE_SELECTED_PATH="$LOCAL_PATH/$FILE_SELECTED"
-                return 0
-            fi
-        fi
-    done
-}
-
 
 
 
@@ -235,6 +206,25 @@ function filebrowser
 # ===========================
 # HELPERS - LOG/ERROR
 # ===========================
+### system message dialog ###
+function systemMsg()
+{
+    whiptail --title "System Message" --msgbox "$1" 16 ${WIDTH}  
+} 
+
+
+### system dialog yes no confirmation ###
+function systemConfirmation()
+{
+    if whiptail --title "System Dialog" --yesno "$1" 16 ${WIDTH}; then 
+        return 0
+
+    else
+        return 1
+    fi
+
+}
+
 
 ### box functions ###
 function infobox()
