@@ -20,16 +20,15 @@ x11vnc -wait 50 -noxdamage -display :0 -forever -o /var/log/x11vnc.log -bg -view
 mountpoint -q ${HOME}/BoxPC/ftp || sudo mount --bind /mnt ${HOME}/ftp
 
 
-if [ -e "/opt/starthmi.sh" ]
-then
-	## script should be installed with the application package
-    /pm-app/starthmi.sh
+if [ -e "/pm-app/starthmi.sh" ];then
+  ## script should be installed with the application package
+  /pm-app/starthmi.sh
 else
-	## old style may not successful if library path is no set properly
-	if [ -e "/opt/pds-cutter/pds_cutter" ]; then
-		export LD_LIBRARY_PATH=/opt/qt5-15-15 && export QT_PLUGIN_PATH=/opt/qt5-15-15/plugins && /pm-app/e-hmi/bin/ehmi_pm 2>&1 | systemd-cat -t ehmi_pm
-		/pm-app/e-hmi/bin/pds_cutter 2>&1 | systemd-cat -t pds-cutter
-	else
-		/usr/bin/xterm
-	fi
+  ## old style may not successful if library path is no set properly
+  if [ -e "/opt/pds-cutter/pds_cutter" ]; then
+    export LD_LIBRARY_PATH=/opt/qt5-15-15 && export QT_PLUGIN_PATH=/opt/qt5-15-15/plugins && /pm-app/e-hmi/bin/ehmi_pm 2>&1 | systemd-cat -t ehmi_pm
+    /pm-app/e-hmi/bin/pds_cutter 2>&1 | systemd-cat -t pds-cutter
+  else
+    /usr/bin/xterm
+  fi
 fi
