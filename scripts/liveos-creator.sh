@@ -139,7 +139,7 @@ EOF
 
     # Copy binary installer into rootfs
     if [ ! -e $BINARY_INSTALLER ] ; then
-        echo "Binary Installer $BINARY_INSTALLER symlink not found!"
+        echo "Binary Installer $BINARY_INSTALLER symlink not found!" && exit 1
     else
         cp -v $BINARY_INSTALLER $ROOTFS_LIVE_DIR/root/ || echo "Failed to copy binary installer to image"
     fi
