@@ -5,15 +5,18 @@
 
 REPO_ROOT=$(git rev-parse --show-toplevel)
 
-logstep "Load configuration ..."
-BUILD_CONFIG=$REPO_ROOT/config/build.conf
+echo "Load configuration ..."
+BUILD_CONFIG=$REPO_ROOT/scripts/build.conf
 source $BUILD_CONFIG && echo "$BUILD_CONFIG was sourced!" || echo "Failed to source config: $BUILD_CONFIG"
 
-IMAGE_CONFIG=$REPO_ROOT/config/image.conf
+IMAGE_CONFIG=$REPO_ROOT/scripts/image.conf
 source $IMAGE_CONFIG && echo "$IMAGE_CONFIG was sourced!" || echo "Failed to source config: $IMAGE_CONFIG"
 
-PULL_PKG_SCRIPT=$REPO_ROOT/scripts/pull-packages.sh
-source $PULL_PKG_SCRIPT && echo "$PULL_PKG_SCRIPT was sourced!" || echo "Failed to source config: $PULL_PKG_SCRIPT"
+HELPERS=$REPO_ROOT/scripts/helpers.sh
+source $HELPERS && echo "$HELPERS was sourced!" || echo "Failed to source config: $HELPERS"
+
+#PULL_PKG_SCRIPT=$REPO_ROOT/scripts/pull-packages.sh
+#source $PULL_PKG_SCRIPT && echo "$PULL_PKG_SCRIPT was sourced!" || echo "Failed to source config: $PULL_PKG_SCRIPT"
 
 VERSION_FILE=$REPO_ROOT/version
 source $VERSION_FILE && echo "$VERSION_FILE was sourced!" || echo "Failed to source config: $VERSION_FILE"
