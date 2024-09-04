@@ -10,6 +10,7 @@ source $BUILD_CONFIG && echo "$BUILD_CONFIG was sourced!" || echo "Failed to sou
 HELPER_FUNCTIONS=$REPO_ROOT/scripts/helpers.sh
 source $HELPER_FUNCTIONS && echo "$HELPER_FUNCTIONS was sourced!" || echo "Failed to source config: $BUILD_CONFIG"
 
+readonly LIVE_SYS_DISTRO="jammy"
 readonly TMP_DIR="${REPO_ROOT}/tmp"
 readonly ROOTFS_IMAGE_CREATOR_DIR="$TMP_DIR/rootfs"
 readonly ROOTFS_LIVE_DIR="$TMP_DIR/live-rootfs"
@@ -99,7 +100,7 @@ function create_rootfs(){
 
     mkdir -p $ROOTFS_LIVE_DIR
     echo "Create RootFS of $DISTRO in $ROOTFS_LIVE_DIR "
-    debootstrap --variant=minbase --arch=$ARCH $DISTRO $ROOTFS_LIVE_DIR $REPO
+    debootstrap --variant=minbase --arch=$ARCH $LIVE_SYS_DISTRO $ROOTFS_LIVE_DIR $REPO
     mount_virtfs $ROOTFS_LIVE_DIR
 
     # Configure rootfs
@@ -228,6 +229,16 @@ function create_img(){
     # copy the rootfs to the image file
     cp -a $ROOTFS_LIVE_DIR/* $ROOT_MNT
 
+
+
+    #Install Kernal 
+    if ! chroot $ROOT_MNT apt install -y linux-image-generic; then
+        echo "ERROR: Could not install kernel."
+       clean_img
+       exit 1
+    fi
+
+   
     #mount dev, proc and sys
     mount_virtfs $ROOT_MNT
 
@@ -252,16 +263,6 @@ cat <<EOF > $ROOT_MNT/boot/grub/grub.cfg
 
     }
 EOF
-
-    #Install Kernal 
-    if ! chroot $ROOT_MNT apt install -y linux-image-generic; then
-        echo "ERROR: Could not install kernel."
-       clean_img
-       exit 1
-    fi
-
-   
-
     
 
     # get boot partition UUID
