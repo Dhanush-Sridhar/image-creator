@@ -5,8 +5,9 @@ set -eo pipefail
 REPO_ROOT=$(git rev-parse --show-toplevel) 
 
 echo "Load configuration ..."
-BUILD_CONFIG=$REPO_ROOT/config/build.conf
+BUILD_CONFIG=$REPO_ROOT/scripts/build.conf
 source $BUILD_CONFIG && echo "$BUILD_CONFIG was sourced!" || echo "Failed to source config: $BUILD_CONFIG"
+
 HELPER_FUNCTIONS=$REPO_ROOT/scripts/helpers.sh
 source $HELPER_FUNCTIONS && echo "$HELPER_FUNCTIONS was sourced!" || echo "Failed to source config: $BUILD_CONFIG"
 

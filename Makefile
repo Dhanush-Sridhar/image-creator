@@ -10,7 +10,7 @@ installer:
 	./scripts/image-creator.sh
 
 live-os:
-	./scripts/liveos-creator.sh
+	./scripts/liveos-creator.sh --all-img
 
 clean:
 	./scripts/cleanup.sh
