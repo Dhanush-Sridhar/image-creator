@@ -12,6 +12,9 @@ source $BUILD_CONFIG && echo "$BUILD_CONFIG was sourced!" || echo "Failed to sou
 IMAGE_CONFIG=$REPO_ROOT/config/image.conf
 source $IMAGE_CONFIG && echo "$IMAGE_CONFIG was sourced!" || echo "Failed to source config: $IMAGE_CONFIG"
 
+PULL_PKG_SCRIPT=$REPO_ROOT/scripts/pull-packages.sh
+source $PULL_PKG_SCRIPT && echo "$PULL_PKG_SCRIPT was sourced!" || echo "Failed to source config: $PULL_PKG_SCRIPT"
+
 VERSION_FILE=$REPO_ROOT/version
 source $VERSION_FILE && echo "$VERSION_FILE was sourced!" || echo "Failed to source config: $VERSION_FILE"
 
@@ -68,6 +71,10 @@ function usage() {
     echo "  --install-wifi :"
     echo "      Installs Wi-Fi driver for Edimax N150 (EW7811UnV2/EW-7611ULB)"
     echo "      Default: ${INSTALL_WIFI}"
+    echo ""
+    echo "  --pull-packages :"
+    echo "	Pull packages from app repo (i.e. Nexus)"
+    echo "      Default: ${PULL_PACKAGES}"
     echo ""
     echo "  --clean :"
     echo "      Cleans the image-creator environment (rootfs, image files, tarballs, ...)."
@@ -531,6 +538,13 @@ console_log "=========================================================="
 console_log "### Install local packages to the rootfs ###"
 console_log "=========================================================="
 if [ "${IMAGE_TYPE}" != "installation" ]; then
+
+
+    #################### Pull Debian packages from Nexus #######################
+    if [ ${PULL_PACKAGES} = "YES" ]; then
+	$PULL_PKG_SCRIPT || echo "Failed to pull packages!"
+    fi
+
     #################### Qt 5.15.0 by Stephan Binner ###########################
     if [ ${INSTALL_QT} = "YES" ]; then
         ## Tarball packages
