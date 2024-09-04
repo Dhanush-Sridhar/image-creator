@@ -99,7 +99,7 @@ function host_setup(){
 function create_rootfs(){
 
     mkdir -p $ROOTFS_LIVE_DIR
-    echo "Create RootFS of $DISTRO in $ROOTFS_LIVE_DIR "
+    echo "Create RootFS of $LIVE_SYS_DISTRO in $ROOTFS_LIVE_DIR "
     debootstrap --variant=minbase --arch=$ARCH $LIVE_SYS_DISTRO $ROOTFS_LIVE_DIR $REPO
     mount_virtfs $ROOTFS_LIVE_DIR
 
@@ -229,7 +229,8 @@ function create_img(){
     # copy the rootfs to the image file
     cp -a $ROOTFS_LIVE_DIR/* $ROOT_MNT
 
-
+ #mount dev, proc and sys
+    mount_virtfs $ROOT_MNT
 
     #Install Kernal 
     if ! chroot $ROOT_MNT apt install -y linux-image-generic; then
@@ -239,8 +240,7 @@ function create_img(){
     fi
 
    
-    #mount dev, proc and sys
-    mount_virtfs $ROOT_MNT
+   
 
      # install grub BIOS bootloader
     grub-install --target=i386-pc --boot-directory=$ROOT_MNT/boot --recheck $LOOP_DEV
@@ -252,7 +252,13 @@ function create_img(){
         echo "Grub installed successfully."
     fi
 
-        # update the grub configuration
+
+
+    # get boot partition UUID
+    ROOTFS_UUID=$(blkid -s UUID -o value ${LOOP_DEV}p1)
+
+
+# update the grub configuration
 cat <<EOF > $ROOT_MNT/boot/grub/grub.cfg
     set default=0
     set timeout=0
@@ -261,17 +267,12 @@ cat <<EOF > $ROOT_MNT/boot/grub/grub.cfg
         linux /boot/vmlinuz root=UUID=$ROOTFS_UUID
         initrd /boot/initrd.img
 
+
     }
 EOF
     
-
-    # get boot partition UUID
-    ROOTFS_UUID=$(blkid -s UUID -o value ${LOOP_DEV}p1)
-
-
-
-    
-    # configure fstab
+ 
+# configure fstab
 
 cat <<EOF > $ROOT_MNT/etc/fstab
     UUID=$ROOTFS_UUID / ext4 defaults 0 1
