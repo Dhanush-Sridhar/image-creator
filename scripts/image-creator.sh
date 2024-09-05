@@ -34,10 +34,11 @@ function about() {
 ┌──────────────────────────────────────────────────┐
 │      Polar OS Image Creator                      │
 │ ------------------------------------------------ │
-│ Author:   Benjamin Federau                       │"
-│           Suria Reddy                            │"
-│           Dhanush Sridhar                        │"
-│ Version:  ${VERSION}                                  │
+│ Author:   Benjamin Federau                       │
+│           Suria Reddy                            │
+│           Dhanush Sridhar                        │
+│ Version:  ${VERSION}        │
+│ Version:  3.1.1 (1234567)      2024-09-01        │
 │ ------------------------------------------------ │
 │ Purpose: Builds a Linux rootfs and installer     │
 │          as base image for Box-PC applications.  │
