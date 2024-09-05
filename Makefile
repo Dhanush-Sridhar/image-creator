@@ -1,6 +1,6 @@
-.PHONY: pull installer live-os clean show-version  tag all
+.PHONY: pull installer live-os clean show-version tag all
 
-VERSION = $(shell cat version)
+VERSION = $(cat version)
 
 #Pulls debian packages from Nexus apt repo or S3 (quick and dirty yet)
 pull:
@@ -20,7 +20,7 @@ tag:
 	git push --tags
 
 show-version:
-	@echo $(VERSION) `git rev-parse --short HEAD`
+	@echo $(value VERSION)
 
 # show help
 help:

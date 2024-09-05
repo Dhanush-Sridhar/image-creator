@@ -19,7 +19,7 @@ source $HELPERS && echo "$HELPERS was sourced!" || echo "Failed to source config
 #source $PULL_PKG_SCRIPT && echo "$PULL_PKG_SCRIPT was sourced!" || echo "Failed to source config: $PULL_PKG_SCRIPT"
 
 VERSION_FILE=$REPO_ROOT/version
-source $VERSION_FILE && echo "$VERSION_FILE was sourced!" || echo "Failed to source config: $VERSION_FILE"
+VERSION=$(cat version) || echo "Failed to read version file: $VERSION_FILE"
 
 readonly KERNEL_PKG=linux-image-generic
 
