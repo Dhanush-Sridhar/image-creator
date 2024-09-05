@@ -694,7 +694,7 @@ echo -e "## ---\n" >> ${ROOTFS_PATH}/etc/sudoers
 chroot "${ROOTFS_PATH}" chmod -w /etc/sudoers
 
 # ===============================================
-#  Copy version file
+#  VERSION FILE
 # ===============================================
 step_log "Copy version file"
 cp -v "$REPO_ROOT/version" "${ROOTFS_PATH}/opt/version"
@@ -764,9 +764,11 @@ if [ "${IMAGE_TARGET_TYPE}" = "tarball" -o "${IMAGE_TARGET_TYPE}" = "installer" 
         chmod +x "${INSTALLER_BINARY}"
         chgrp $SUDO_GID "${INSTALLER_BINARY}"
         chown $SUDO_USER "${INSTALLER_BINARY}"
-        sudo -u $SUDO_USER ln -sf "${INSTALLER_BINARY}" "${TMP_PATH}/${IMAGE_TYPE}-image-installer-latest.bin"
-        ##echo installer done here...
-        ##ls -l "${INSTALLER_BINARY}"
+
+        # Create symlink
+        echo "Create symlink from ${INSTALLER_BINARY} to ${INSTALLER_SYMLINK}"
+        [ -L ${INSTALLER_SYMLINK} ] && sudo unlink "${INSTALLER_SYMLINK}" && echo "Old symlink was removed!"
+        sudo ln -sf "${INSTALLER_BINARY}" "${INSTALLER_SYMLINK}" || sudo -u $SUDO_USER ln -sf "${INSTALLER_BINARY}" "${INSTALLER_SYMLINK}" || echo "ERROR: Failed to create symlink!"
     fi
 fi
 
