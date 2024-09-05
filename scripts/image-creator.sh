@@ -682,14 +682,37 @@ install -m 0644 ${ROOTFS_CONF_PATH}/etc/ntp.conf ${ROOTFS_PATH}/etc/
 # ===============================================
 step_log "### Configure sudoers ###"
 chroot "${ROOTFS_PATH}" chmod +w /etc/sudoers
-echo -e "\n## Polar Cutter Application Calls" >> ${ROOTFS_PATH}/etc/sudoers
-echo -e "ALL\tALL =(ALL) NOPASSWD: /bin/mount" >> ${ROOTFS_PATH}/etc/sudoers
-echo -e "ALL\tALL =(ALL) NOPASSWD: /bin/umount" >> ${ROOTFS_PATH}/etc/sudoers
-echo -e "ALL\tALL =(ALL) NOPASSWD: /bin/date" >> ${ROOTFS_PATH}/etc/sudoers
-echo -e "ALL\tALL =(ALL) NOPASSWD: /sbin/reboot" >> ${ROOTFS_PATH}/etc/sudoers
-echo -e "ALL\tALL =(ALL) NOPASSWD: /sbin/halt" >> ${ROOTFS_PATH}/etc/sudoers
-echo -e "ALL\tALL =(ALL) NOPASSWD: /sbin/hwclock" >> ${ROOTFS_PATH}/etc/sudoers
-echo -e "## ---\n" >> ${ROOTFS_PATH}/etc/sudoers
+
+cat <<EOM > ${ROOTFS_PATH}/etc/sudoers
+# Please consider adding local content in /etc/sudoers.d/ instead of
+
+Defaults        env_reset
+Defaults        mail_badpass
+Defaults        secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
+
+# User privilege specification
+root    ALL=(ALL:ALL) ALL
+
+# Members of the admin group may gain root privileges
+%admin ALL=(ALL) ALL
+
+# Allow members of group sudo to execute any command
+%sudo   ALL=(ALL:ALL) ALL
+
+# See sudoers(5) for more information on "#include" directives:
+#includedir /etc/sudoers.d
+
+## Polar Cutter Application Calls
+ALL     ALL =(ALL) NOPASSWD: /bin/mount
+ALL     ALL =(ALL) NOPASSWD: /bin/umount
+ALL     ALL =(ALL) NOPASSWD: /bin/date
+ALL     ALL =(ALL) NOPASSWD: /sbin/reboot
+ALL     ALL =(ALL) NOPASSWD: /sbin/halt
+ALL     ALL =(ALL) NOPASSWD: /sbin/hwclock
+ALL     ALL =(ALL) NOPASSWD: /usr/bin/nmcli
+## ---
+EOM
+
 chroot "${ROOTFS_PATH}" chmod -w /etc/sudoers
 # show sudeors file on console:
 cat ${ROOTFS_PATH}/etc/sudoers
