@@ -119,6 +119,7 @@ function print_env() {
     echo "Distro: ${DISTRO}"
     echo "Image Type: ${IMAGE_TYPE}"
     echo "Image Target: ${IMAGE_TARGET}"
+    echo
 }
 
 
@@ -211,8 +212,6 @@ function install_fonts() {
 }
 
 
-# ==================== PARAMETERS ====================== #
-
 # ===============================================
 # PARAMETERS - CLI ARGUMENTS / TRIGGER
 # ===============================================
@@ -288,14 +287,8 @@ set -- "${POSITIONAL[@]}" # restore positional parameters
 [ "$(whoami)" != "root" ] && console_log "You must be root or use the sudo command!" && exit 1
 
 # ===============================================
-# DEBOOTSTRAP
+# HOST INIT
 # ===============================================
-DEBOOTSTRAP_CMD="$(which debootstrap)"
-QEMU_DEBOOTSTRAP_CMD="$(which qemu-debootstrap)"
-
-console_log "Generate target=${IMAGE_TARGET} type=${IMAGE_TYPE}"
-console_log ""
-
 if [ -z "${DEBOOTSTRAP_CMD}" ] || [ -z "${QEMU_DEBOOTSTRAP_CMD}" ]; then
     console_log "=========================================================="
     console_log "### Installing needed host packages ###"
