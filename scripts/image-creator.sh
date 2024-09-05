@@ -21,6 +21,8 @@ source $HELPERS && echo "$HELPERS was sourced!" || echo "Failed to source config
 VERSION_FILE=$REPO_ROOT/version
 source $VERSION_FILE && echo "$VERSION_FILE was sourced!" || echo "Failed to source config: $VERSION_FILE"
 
+readonly KERNEL_PKG=linux-image-generic
+
 export DEBIAN_FRONTEND=noninteractive
 
 # ===============================================
@@ -705,7 +707,7 @@ cp -v "$REPO_ROOT/version" "${ROOTFS_PATH}/opt/version"
 # ===============================================
 #  Install Kernel
 # ===============================================
-if ! chroot "${ROOTFS_PATH}" ${APT_CMD} install -y linux-image-generic; then
+if ! chroot "${ROOTFS_PATH}" ${APT_CMD} install -y ${KERNEL_PKG}; then
     echo "ERROR: Could not install kernel."
     umount_dev_sys_proc "${ROOTFS_PATH}"
     exit 1
