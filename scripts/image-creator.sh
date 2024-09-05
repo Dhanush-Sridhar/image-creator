@@ -301,15 +301,13 @@ DISTRO_LIST=$(find /usr/share/debootstrap/scripts/ -type l -print | xargs -I {} 
 DISTRO_OK="false"
 for DISTRO_NAME in ${DISTRO_LIST}
 do
-  if [ "${DISTRO}" = "${DISTRO_NAME}" ]
-  then
+  if [ "${DISTRO}" = "${DISTRO_NAME}" ]; then
     DISTRO_OK="true"
     break
   fi
 done
   
-if [ "${DISTRO_OK}" = "false" ]
-then
+if [ "${DISTRO_OK}" = "false" ]; then
     console_log "Unknown distribution name ${DISTRO}!"
     console_log "Available distributions: "
     console_log "${DISTRO_LIST}"
@@ -624,8 +622,7 @@ sed -i "s/replace-me/${IMAGE_HOSTNAME}/g" ${ROOTFS_PATH}/etc/hosts
 # ===============================================
 # IMAGE-TYPE: DEVELOPMENT
 # ===============================================
-if [ "${IMAGE_TYPE}" != "development" ]
-then
+if [ "${IMAGE_TYPE}" != "development" ]; then
     sed -i "s/NODM_ENABLED=false/NODM_ENABLED=true/g" ${ROOTFS_PATH}/etc/default/nodm
     sed -i "s/NODM_USER=root/NODM_USER=${IMAGE_USER}/g" ${ROOTFS_PATH}/etc/default/nodm
     sed -i "s/NODM_X_OPTIONS='-nolisten tcp'/NODM_X_OPTIONS='-nolisten tcp -nocursor'/g" ${ROOTFS_PATH}/etc/default/nodm
@@ -642,8 +639,7 @@ fi
 # ===============================================
 # IMAGE-TYPE: PRODUCTION - APP & ISPV
 # ===============================================
-if [ "${IMAGE_TYPE}" = "production" ]
-then
+if [ "${IMAGE_TYPE}" = "production" ]; then
     chroot "${ROOTFS_PATH}" ln -sf /data/ispv_root /ispv_root
     find ${APP_CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -a {} ${ROOTFS_PATH} \;
 fi
@@ -703,8 +699,8 @@ fi
 # ===============================================
 # OPTION: ENTER CHROOT
 # ===============================================
-if [ "${ENTER_CHROOT}" = "YES" ]
-then
+if [ "${ENTER_CHROOT}" = "YES" ]; then
+    step_log "### Enter chroot ###"
     chroot "${ROOTFS_PATH}"
 fi
 
@@ -744,7 +740,7 @@ umount_dev_sys_proc "${ROOTFS_PATH}"
 # ===============================================
 # TARBALL / INSTALLER
 # ===============================================
-if [ "${IMAGE_TARGET_TYPE}" = "tarball" -o "${IMAGE_TARGET_TYPE}" = "installer" ]; then
+if [ "${IMAGE_TARGET_TYPE}" = "tarball" ] || [ "${IMAGE_TARGET_TYPE}" = "installer" ]; then
     step_log "### Create rootfs tarball ###"
     pushd "${ROOTFS_PATH}" &> /dev/null
     tar -cjf ${ROOTFS_TARBALL} * || exit 1
@@ -752,7 +748,10 @@ if [ "${IMAGE_TARGET_TYPE}" = "tarball" -o "${IMAGE_TARGET_TYPE}" = "installer" 
     chown $SUDO_USER "${ROOTFS_TARBALL}"
     popd &> /dev/null
 
-    if [ "${IMAGE_TARGET_TYPE}" = "installer" -o "${IMAGE_TYPE}" = "installation" ]; then
+    # NOTE: important step
+    if [ "${IMAGE_TARGET_TYPE}" = "installer" ] || [ "${IMAGE_TYPE}" = "installation" ]; then
+        step_log "### Create installer/installation ###"
+        # Create binary installer with install script and rootfs tarball
         cat "${INSTALLER_SCRIPT}" "${ROOTFS_TARBALL}" > "${INSTALLER_BINARY}"
 
         # Change permissions and make it executeable
@@ -785,7 +784,7 @@ fi
 # ===============================================
 # IMAGE-TYPE: DEV / LOOP
 # ===============================================
-if [ "${IMAGE_TARGET_TYPE}" = "dev" -o "${IMAGE_TARGET_TYPE}" = "loop" ]; then
+if [ "${IMAGE_TARGET_TYPE}" = "dev" ] || [ "${IMAGE_TARGET_TYPE}" = "loop" ]; then
     losetup -D
     umount "${DATAFS_PATH}"
     umount "${ROOTFS_PATH}"
