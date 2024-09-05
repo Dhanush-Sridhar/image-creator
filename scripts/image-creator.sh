@@ -697,6 +697,13 @@ echo -e "## ---\n" >> ${ROOTFS_PATH}/etc/sudoers
 chroot "${ROOTFS_PATH}" chmod -w /etc/sudoers
 
 # ===============================================
+#  Copy version file
+# ===============================================
+step_log "Copy version file"
+cat "$REPO_ROOT/version"
+cp -v "$REPO_ROOT/version" "${ROOTFS_PATH}/opt/version"
+
+# ===============================================
 #  Install Kernel
 # ===============================================
 if ! chroot "${ROOTFS_PATH}" ${APT_CMD} install -y linux-image-generic; then
