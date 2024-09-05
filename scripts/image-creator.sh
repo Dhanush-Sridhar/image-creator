@@ -679,6 +679,18 @@ echo -e "ALL\tALL =(ALL) NOPASSWD: /sbin/halt" >> ${ROOTFS_PATH}/etc/sudoers
 echo -e "ALL\tALL =(ALL) NOPASSWD: /sbin/hwclock" >> ${ROOTFS_PATH}/etc/sudoers
 echo -e "## ---\n" >> ${ROOTFS_PATH}/etc/sudoers
 chroot "${ROOTFS_PATH}" chmod -w /etc/sudoers
+# show sudeors file on console:
+cat ${ROOTFS_PATH}/etc/sudoers
+
+# ===============================================
+#  REDUCE ROOTFS SIZE
+# ===============================================
+step_log "Remove man page files"
+rm -rv "${ROOTFS_PATH}/usr/share/doc"
+rm -rv "${ROOTFS_PATH}/usr/share/doc-base"
+rm -rv "${ROOTFS_PATH}/usr/share/man"
+rm -rv "${ROOTFS_PATH}/usr/share/man-db"
+
 
 # ===============================================
 #  VERSION FILE
