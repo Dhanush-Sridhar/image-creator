@@ -291,8 +291,7 @@ QEMU_DEBOOTSTRAP_CMD="$(which qemu-debootstrap)"
 console_log "Generate target=${IMAGE_TARGET} type=${IMAGE_TYPE}"
 console_log ""
 
-if [ -z "${DEBOOTSTRAP_CMD}" -o -z "${QEMU_DEBOOTSTRAP_CMD}" ]
-then
+if [ -z "${DEBOOTSTRAP_CMD}" ] || [ -z "${QEMU_DEBOOTSTRAP_CMD}" ]; then
     console_log "=========================================================="
     console_log "### Installing needed host packages ###"
     console_log "=========================================================="
