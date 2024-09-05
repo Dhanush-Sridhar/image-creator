@@ -702,7 +702,6 @@ chroot "${ROOTFS_PATH}" chmod -w /etc/sudoers
 #  Copy version file
 # ===============================================
 step_log "Copy version file"
-cat "$REPO_ROOT/version"
 cp -v "$REPO_ROOT/version" "${ROOTFS_PATH}/opt/version"
 
 # ===============================================
