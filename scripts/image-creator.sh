@@ -113,6 +113,7 @@ function error() {
 }
 
 function print_env() {
+    step_log "SUMMARY"
     echo "Image-Creator v$VERSION"
     echo "Architecture: ${ARCH}"
     echo "Distro: ${DISTRO}"
