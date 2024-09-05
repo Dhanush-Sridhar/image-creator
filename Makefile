@@ -13,7 +13,8 @@ live-os:
 	./scripts/liveos-creator.sh --all-img
 
 clean:
-	./scripts/cleanup.sh
+	#./scripts/cleanup.sh
+	./scripts/image-creator.sh --clean
 
 tag:
 	git tag v$(VERSION)
@@ -21,6 +22,11 @@ tag:
 
 show-version:
 	@echo $(value VERSION)
+
+all:
+	./scripts/image-creator.sh
+	./scripts/liveos-creator.sh --all-img
+
 
 # show help
 help:

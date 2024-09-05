@@ -123,6 +123,12 @@ function print_env() {
     echo
 }
 
+# ===============================================
+# ROOT CHECK
+# ===============================================
+function root_check() {
+    [ "$(whoami)" != "root" ] && console_log "You must be root or use the sudo command!" && exit 1
+}
 
 # ===============================================
 # FUNCTIONS - MOUNT /DEV /SYS /PROC
@@ -241,8 +247,9 @@ do
             ;;
         --clean)
             CLEAN="YES"
+            root_check
             [ -e "${ROOTFS_PATH}" ] && umount_dev_sys_proc "${ROOTFS_PATH}" || echo "No remaining mount to rootfs. Clean canvas! :)"
-            rm -rf "${ROOTFS_PATH}"
+            rm -rvf "${ROOTFS_PATH}" && exit 0
             shift
             ;;
         --install-qt)
@@ -290,9 +297,7 @@ done
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
 
-# ==================== CHECKS ====================== #
-
-[ "$(whoami)" != "root" ] && console_log "You must be root or use the sudo command!" && exit 1
+root_check
 
 # ===============================================
 # HOST INIT
@@ -391,7 +396,7 @@ if [ ! -z "${IMAGE_TYPE}" ]
 then
     case ${IMAGE_TYPE} in
         production)
-            IMAGE_PACKAGE_LIST="${PKG_RUNTIME_IMAGE} ${PKG_BLUETOOTH} ${PKG_BUILD} ${PKG_NETWORK} ${PKG_TIME}"
+            IMAGE_PACKAGE_LIST="${PKG_RUNTIME_IMAGE}"
             ;;
         development)
             IMAGE_PACKAGE_LIST="${PKG_DEV_IMAGE}"

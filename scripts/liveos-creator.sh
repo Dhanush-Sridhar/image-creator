@@ -360,6 +360,8 @@ function test_iso(){
 function test_img(){
     if ! test -f $IMAGE_FILE_LATEST_SYMLINK; then echo "No Image file found! Create image first with --img."; exit 1; fi
     #UEFI:qemu-system-x86_64 -enable-kvm -boot menu=on -bios /usr/share/ovmf/OVMF.fd -m 4G -cpu host -smp 2 -vga virtio -display sdl,gl=on -drive format=raw,file=$IMAGE_FILE_LATEST_SYMLINK
+
+    # HINT for WSL2:  export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0 && echo $DISPLAY
     qemu-system-x86_64  -boot menu=on -m 4G  -smp 2 -vga virtio -display sdl,gl=on -drive format=raw,file=$IMAGE_FILE_LATEST_SYMLINK
 }
 
