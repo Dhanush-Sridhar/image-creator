@@ -131,20 +131,32 @@ function mount_dev_sys_proc() {
     local _ROOTFS_PATH="$1"
     step_log "### Mount dev, proc, sys to rootfs ###"
     [ -e "${_ROOTFS_PATH}" ] || error "Path ${_ROOTFS_PATH} not found!"
-    mount -o bind /dev "${_ROOTFS_PATH}/dev"
-    mount -o bind /dev/pts "${_ROOTFS_PATH}/dev/pts"
-    mount -o bind /sys "${_ROOTFS_PATH}/sys"
-    mount -t proc /proc "${_ROOTFS_PATH}/proc"
+
+    local dev="${_ROOTFS_PATH}/dev"
+    local pts="${_ROOTFS_PATH}/dev/pts"
+    local sys="${_ROOTFS_PATH}/sys"
+    local proc="${_ROOTFS_PATH}/proc"
+
+    mount -o bind /dev      "$dev"  && echo "$dev mounted"  || echo "Failed to mount $dev"
+    mount -o bind /dev/pts  "$pts"  && echo "$pts mounted"  || echo "Failed to mount $pts"
+    mount -o bind /sys      "$sys"  && echo "$sys mounted"  || echo "Failed to mount $sys"
+    mount -t proc /proc     "$proc" && echo "$proc mounted" || echo "Failed to mount $proc"
 }
 
 function umount_dev_sys_proc() {
     local _ROOTFS_PATH="$1"
     step_log "### Unmount dev, proc, sys from rootfs ###"
     [ -e "${_ROOTFS_PATH}" ] || error "Path ${_ROOTFS_PATH} not found!"
-    umount "${_ROOTFS_PATH}/dev/pts"
-    umount "${_ROOTFS_PATH}/dev"
-    umount "${_ROOTFS_PATH}/sys"
-    umount "${_ROOTFS_PATH}/proc"
+
+    local pts="${_ROOTFS_PATH}/dev/pts"
+    local dev="${_ROOTFS_PATH}/dev"
+    local sys="${_ROOTFS_PATH}/sys"
+    local proc="${_ROOTFS_PATH}/proc"
+
+    umount "$pts"   && echo "$pts unmounted"  || echo "Failed to unmount $pts"
+    umount "$dev"   && echo "$dev unmounted"  || echo "Failed to unmount $dev"
+    umount "$sys"   && echo "$sys unmounted"  || echo "Failed to unmount $sys"
+    umount "$proc"  && echo "$proc unmounted" || echo "Failed to unmount $proc"
 }
 
 # ===============================================
