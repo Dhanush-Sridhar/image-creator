@@ -18,6 +18,7 @@ rootfs*.tar.*
 *.bin
 *.bak
 *.deb
+*.deb.*
 *.img
 
 # IDE
