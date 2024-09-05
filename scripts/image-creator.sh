@@ -22,6 +22,8 @@ VERSION_FILE=$REPO_ROOT/version
 VERSION=$(cat version) || echo "Failed to read version file: $VERSION_FILE"
 
 readonly KERNEL_PKG=linux-image-generic
+DEBOOTSTRAP_CMD="$(which debootstrap)"
+QEMU_DEBOOTSTRAP_CMD="$(which qemu-debootstrap)"
 
 export DEBIAN_FRONTEND=noninteractive
 
