@@ -20,7 +20,7 @@ tag:
 	git push --tags
 
 show-version:
-	@echo $(VERSION)
+	@echo $(VERSION) `git rev-parse --short HEAD`
 
 # show help
 help:
