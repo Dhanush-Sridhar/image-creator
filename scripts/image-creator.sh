@@ -5,15 +5,25 @@
 
 REPO_ROOT=$(git rev-parse --show-toplevel)
 
-logstep "Load configuration ..."
-BUILD_CONFIG=$REPO_ROOT/config/build.conf
+echo "Load configuration ..."
+BUILD_CONFIG=$REPO_ROOT/scripts/build.conf
 source $BUILD_CONFIG && echo "$BUILD_CONFIG was sourced!" || echo "Failed to source config: $BUILD_CONFIG"
 
-IMAGE_CONFIG=$REPO_ROOT/config/image.conf
+IMAGE_CONFIG=$REPO_ROOT/scripts/image.conf
 source $IMAGE_CONFIG && echo "$IMAGE_CONFIG was sourced!" || echo "Failed to source config: $IMAGE_CONFIG"
 
+HELPERS=$REPO_ROOT/scripts/helpers.sh
+source $HELPERS && echo "$HELPERS was sourced!" || echo "Failed to source config: $HELPERS"
+
+#PULL_PKG_SCRIPT=$REPO_ROOT/scripts/pull-packages.sh
+#source $PULL_PKG_SCRIPT && echo "$PULL_PKG_SCRIPT was sourced!" || echo "Failed to source config: $PULL_PKG_SCRIPT"
+
 VERSION_FILE=$REPO_ROOT/version
-source $VERSION_FILE && echo "$VERSION_FILE was sourced!" || echo "Failed to source config: $VERSION_FILE"
+VERSION=$(cat version) || echo "Failed to read version file: $VERSION_FILE"
+
+readonly KERNEL_PKG=linux-image-generic
+DEBOOTSTRAP_CMD="$(which debootstrap)"
+QEMU_DEBOOTSTRAP_CMD="$(which qemu-debootstrap)"
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -26,10 +36,10 @@ function about() {
 ┌──────────────────────────────────────────────────┐
 │      Polar OS Image Creator                      │
 │ ------------------------------------------------ │
-│ Author:   Benjamin Federau                       │"
-│           Suria Reddy                            │"
-│           Dhanush Sridhar                        │"
-│ Version:  ${VERSION}                                  │
+│ Author:   Benjamin Federau                       │
+│           Suria Reddy                            │
+│           Dhanush Sridhar                        │
+│ Version:  ${VERSION}        │
 │ ------------------------------------------------ │
 │ Purpose: Builds a Linux rootfs and installer     │
 │          as base image for Box-PC applications.  │
@@ -69,6 +79,10 @@ function usage() {
     echo "      Installs Wi-Fi driver for Edimax N150 (EW7811UnV2/EW-7611ULB)"
     echo "      Default: ${INSTALL_WIFI}"
     echo ""
+    echo "  --pull-packages :"
+    echo "	Pull packages from app repo (i.e. Nexus)"
+    echo "      Default: ${PULL_PACKAGES}"
+    echo ""
     echo "  --clean :"
     echo "      Cleans the image-creator environment (rootfs, image files, tarballs, ...)."
     echo ""
@@ -88,6 +102,7 @@ function console_log() {
 }
 
 function step_log() {
+    echo
     echo "======================================="
     echo "$1"
     echo "======================================="
@@ -99,53 +114,68 @@ function error() {
 }
 
 function print_env() {
+    step_log "BUILD CONFIG"
     echo "Image-Creator v$VERSION"
     echo "Architecture: ${ARCH}"
     echo "Distro: ${DISTRO}"
     echo "Image Type: ${IMAGE_TYPE}"
     echo "Image Target: ${IMAGE_TARGET}"
+    echo
 }
 
+# ===============================================
+# ROOT CHECK
+# ===============================================
+function root_check() {
+    [ "$(whoami)" != "root" ] && console_log "You must be root or use the sudo command!" && exit 1
+}
 
 # ===============================================
 # FUNCTIONS - MOUNT /DEV /SYS /PROC
 # ===============================================
 function mount_dev_sys_proc() {
     local _ROOTFS_PATH="$1"
-    console_log "=========================================================="
-    console_log "### Mount dev, proc, sys to rootfs ###"
-    console_log "=========================================================="
+    step_log "### Mount dev, proc, sys to rootfs ###"
     [ -e "${_ROOTFS_PATH}" ] || error "Path ${_ROOTFS_PATH} not found!"
-    mount -o bind /dev "${_ROOTFS_PATH}/dev"
-    mount -o bind /dev/pts "${_ROOTFS_PATH}/dev/pts"
-    mount -o bind /sys "${_ROOTFS_PATH}/sys"
-    mount -t proc /proc "${_ROOTFS_PATH}/proc"
+
+    local dev="${_ROOTFS_PATH}/dev"
+    local pts="${_ROOTFS_PATH}/dev/pts"
+    local sys="${_ROOTFS_PATH}/sys"
+    local proc="${_ROOTFS_PATH}/proc"
+
+    mount -o bind /dev      "$dev"  && echo "$dev mounted"  || echo "Failed to mount $dev"
+    mount -o bind /dev/pts  "$pts"  && echo "$pts mounted"  || echo "Failed to mount $pts"
+    mount -o bind /sys      "$sys"  && echo "$sys mounted"  || echo "Failed to mount $sys"
+    mount -t proc /proc     "$proc" && echo "$proc mounted" || echo "Failed to mount $proc"
 }
 
 function umount_dev_sys_proc() {
     local _ROOTFS_PATH="$1"
-    console_log "=========================================================="
-    console_log "### Unmount dev, proc, sys from rootfs ###"
-    console_log "=========================================================="
+    step_log "### Unmount dev, proc, sys from rootfs ###"
     [ -e "${_ROOTFS_PATH}" ] || error "Path ${_ROOTFS_PATH} not found!"
-    umount "${_ROOTFS_PATH}/dev/pts"
-    umount "${_ROOTFS_PATH}/dev"
-    umount "${_ROOTFS_PATH}/sys"
-    umount "${_ROOTFS_PATH}/proc"
+
+    local pts="${_ROOTFS_PATH}/dev/pts"
+    local dev="${_ROOTFS_PATH}/dev"
+    local sys="${_ROOTFS_PATH}/sys"
+    local proc="${_ROOTFS_PATH}/proc"
+
+    umount "$pts"   && echo "$pts unmounted"  || echo "Failed to unmount $pts"
+    umount "$dev"   && echo "$dev unmounted"  || echo "Failed to unmount $dev"
+    umount "$sys"   && echo "$sys unmounted"  || echo "Failed to unmount $sys"
+    umount "$proc"  && echo "$proc unmounted" || echo "Failed to unmount $proc"
 }
 
 # ===============================================
 # FUNCTIONS - CREATE PARTITIONS
 # ===============================================
 function create_partitions() {
+    step_log "### Create partitions for ${_IMAGE_TARGET} ###"
+
     local _IMAGE_TARGET="$1"
     local _BOOT_PARTITION="$2"
     local _ROOTFS_PARTITION="$3"
     local _DATAFS_PARTITION="$4"
 
-    console_log "=========================================================="
-    console_log "### Create partitions for ${_IMAGE_TARGET} ###"
-    console_log "=========================================================="
     sgdisk -Z ${_IMAGE_TARGET}
 
     # boot partition
@@ -196,8 +226,6 @@ function install_fonts() {
 }
 
 
-# ==================== PARAMETERS ====================== #
-
 # ===============================================
 # PARAMETERS - CLI ARGUMENTS / TRIGGER
 # ===============================================
@@ -219,8 +247,9 @@ do
             ;;
         --clean)
             CLEAN="YES"
+            root_check
             [ -e "${ROOTFS_PATH}" ] && umount_dev_sys_proc "${ROOTFS_PATH}" || echo "No remaining mount to rootfs. Clean canvas! :)"
-            rm -rf "${ROOTFS_PATH}"
+            rm -rvf "${ROOTFS_PATH}" && exit 0
             shift
             ;;
         --install-qt)
@@ -268,24 +297,13 @@ done
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
 
-# ==================== CHECKS ====================== #
-
-[ "$(whoami)" != "root" ] && console_log "You must be root or use the sudo command!" && exit 1
+root_check
 
 # ===============================================
-# DEBOOTSTRAP
+# HOST INIT
 # ===============================================
-DEBOOTSTRAP_CMD="$(which debootstrap)"
-QEMU_DEBOOTSTRAP_CMD="$(which qemu-debootstrap)"
-
-console_log "Generate target=${IMAGE_TARGET} type=${IMAGE_TYPE}"
-console_log ""
-
-if [ -z "${DEBOOTSTRAP_CMD}" -o -z "${QEMU_DEBOOTSTRAP_CMD}" ]
-then
-    console_log "=========================================================="
-    console_log "### Installing needed host packages ###"
-    console_log "=========================================================="
+if [ -z "${DEBOOTSTRAP_CMD}" ] || [ -z "${QEMU_DEBOOTSTRAP_CMD}" ]; then
+    step_log "### Installing needed host packages ###"
     ${APT_CMD} update
     ${APT_CMD} -y install debootstrap qemu-user-static || error "Could not install host packages!"
     DEBOOTSTRAP_CMD="$(which debootstrap)"
@@ -300,15 +318,13 @@ DISTRO_LIST=$(find /usr/share/debootstrap/scripts/ -type l -print | xargs -I {} 
 DISTRO_OK="false"
 for DISTRO_NAME in ${DISTRO_LIST}
 do
-  if [ "${DISTRO}" = "${DISTRO_NAME}" ]
-  then
+  if [ "${DISTRO}" = "${DISTRO_NAME}" ]; then
     DISTRO_OK="true"
     break
   fi
 done
   
-if [ "${DISTRO_OK}" = "false" ]
-then
+if [ "${DISTRO_OK}" = "false" ]; then
     console_log "Unknown distribution name ${DISTRO}!"
     console_log "Available distributions: "
     console_log "${DISTRO_LIST}"
@@ -380,7 +396,7 @@ if [ ! -z "${IMAGE_TYPE}" ]
 then
     case ${IMAGE_TYPE} in
         production)
-            IMAGE_PACKAGE_LIST="${PKG_RUNTIME_IMAGE} ${PKG_BLUETOOTH} ${PKG_BUILD} ${PKG_NETWORK} ${PKG_TIME}"
+            IMAGE_PACKAGE_LIST="${PKG_RUNTIME_IMAGE}"
             ;;
         development)
             IMAGE_PACKAGE_LIST="${PKG_DEV_IMAGE}"
@@ -449,10 +465,9 @@ fi
 # create an initial rootfs using debootstrap
 # ===============================================
 if [ ! -e "${ROOTFS_PATH}/etc/os-release" ]; then
-    console_log "=========================================================="
-    console_log "### Create rootfs ### "
-    console_log "=========================================================="
-    if [ "${ARCH}" != "i386" -o "${ARCH}" != "amd64" ]; then
+    step_log "### Create rootfs ### "
+
+    if [ "${ARCH}" != "i386" ] && [ "${ARCH}" != "amd64" ]; then
         HOSTNAME=${IMAGE_HOSTNAME} ${QEMU_DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH} #--include="${PKG_BASE_IMAGE}"
     else
         HOSTNAME=${IMAGE_HOSTNAME} ${DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH} #--include="${PKG_BASE_IMAGE}"
@@ -465,9 +480,7 @@ mount_dev_sys_proc "${ROOTFS_PATH}"
 # ===============================================
 # create the sources.list files for apt:
 # ===============================================
-console_log "=========================================================="
-console_log "### Create sources.list ###"
-console_log "=========================================================="
+step_log "### Create sources.list ###"
 
 if [ "${DISTRO_ID}" = "ubuntu" ]; then
     TMP_REPOS="${DISTRO} ${DISTRO}-updates ${DISTRO}-security ${DISTRO}-backports"
@@ -494,43 +507,50 @@ if [ "${DISTRO_ID}" = "ubuntu" ]; then
     fi
 fi
 
-console_log "=========================================================="
-console_log "### Configure locales ###"
-console_log "=========================================================="
+# ===============================================
+# LOCALES
+# ===============================================
+step_log "### Configure locales ###"
 chroot ${ROOTFS_PATH} locale-gen de_DE.UTF-8
 
-console_log "=========================================================="
-console_log "### Configure dash/bash ###"
-console_log "=========================================================="
+
+# ===============================================
+# DASH / BASH
+# ===============================================
+step_log "### Configure dash/bash ###"
 chroot ${ROOTFS_PATH} /bin/bash -c 'echo "dash dash/sh boolean false" | debconf-set-selections'
 chroot ${ROOTFS_PATH} /bin/bash -c 'DEBIAN_FRONTEND=noninteractive dpkg-reconfigure dash'
 
-# update rootfs
-console_log "=========================================================="
-console_log "### Update rootfs ###"
-console_log "=========================================================="
+# ===============================================
+# UPDATE ROOTFS
+# ===============================================
+step_log "### Update rootfs ###"
 cp -v /etc/resolv.conf ${ROOTFS_PATH}/etc # TODO: error msg
 chroot ${ROOTFS_PATH} ${APT_CMD} update
 POLICY_RC_D_FILE="${ROOTFS_PATH}/usr/sbin/policy-rc.d"
 install -m 0644 ${ROOTFS_CONF_PATH}/policy-rc.d ${POLICY_RC_D_FILE}
 chroot ${ROOTFS_PATH} ${APT_CMD} -y dist-upgrade
 
-# install some fundamental packages
-console_log "=========================================================="
-console_log "### Install packages in rootfs ###"
-console_log "=========================================================="
+
+# ===============================================
+# INSTALL PACKAGES
+# ===============================================
+step_log "### Install packages in rootfs ###"
 chroot ${ROOTFS_PATH} ${APT_CMD} update
 chroot ${ROOTFS_PATH} ${APT_CMD} -y install ${IMAGE_PACKAGE_LIST}
 chroot ${ROOTFS_PATH} ${APT_CMD} -y clean
 
 # ===============================================
-# IMAGE-TYPE: NOT INSTALLATION
+# INSTALL POLAR PACKAGES
 # ===============================================
-
-console_log "=========================================================="
-console_log "### Install local packages to the rootfs ###"
-console_log "=========================================================="
+step_log "### Install local packages to the rootfs ###"
 if [ "${IMAGE_TYPE}" != "installation" ]; then
+
+    #################### Pull Debian packages from Nexus #######################
+    if [ ${PULL_PACKAGES} = "YES" ]; then
+	    $PULL_PKG_SCRIPT || echo "Failed to pull packages!"
+    fi
+
     #################### Qt 5.15.0 by Stephan Binner ###########################
     if [ ${INSTALL_QT} = "YES" ]; then
         ## Tarball packages
@@ -541,7 +561,6 @@ if [ "${IMAGE_TYPE}" != "installation" ]; then
             tar -xf ${TAR_FILE} -C ${ROOTFS_PATH}
         done
     fi
-
 
     #################### Debian packages ########################################
     mount -o bind "${PKG_DEB_PATH}" "${ROOTFS_PATH}/mnt"
@@ -559,7 +578,6 @@ if [ "${IMAGE_TYPE}" != "installation" ]; then
     # Polar font
     step_log "### Install Polar truetype font (Arial Unicode) ###"
     install_fonts
-
 fi
 
 
@@ -574,7 +592,6 @@ then
     for TAR_FILE in $(ls -1 ${PKG_DRIVER_PATH}/*.tar.gz*)
     do
         console_log "## Install $(basename ${TAR_FILE}) to rootfs ##"
-        console_log "=========================================================="
         tar -xvzf ${TAR_FILE} -C ${ROOTFS_PATH}/tmp
         chroot "${ROOTFS_PATH}" ls -al "/tmp/"
     # Hint: this is formated because of EOF to pipe the install.sh script to chroot
@@ -591,9 +608,11 @@ EOF
 fi
 
 
-console_log "=========================================================="
-console_log "### User management ###"
-console_log "=========================================================="
+# ===============================================
+# USER MANAGEMENT
+# ===============================================
+step_log "### User management ###"
+
 echo -e "${IMAGE_PASSWORD}\n${IMAGE_PASSWORD}\n" | chroot ${ROOTFS_PATH} passwd root
 
 chroot ${ROOTFS_PATH} adduser --gecos "" --disabled-password ${IMAGE_USER}
@@ -604,21 +623,23 @@ echo -e "BoxPC\nBoxPC\n" | chroot ${ROOTFS_PATH} passwd BoxPC                   
 
 echo -e "${IMAGE_PASSWORD}\n${IMAGE_PASSWORD}\n" | chroot ${ROOTFS_PATH} passwd ${IMAGE_USER}
 
-console_log "=========================================================="
-console_log "### Configure rootfs ###"
-console_log "=========================================================="
-
-## install (pre)config files to rootfs
+# ===============================================
+# COPY CONFIG FILES TO ROOTFS
+# ===============================================
+step_log "### Install (pre)config files to rootfs ###"
 find ${ROOTFS_CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -r {} ${ROOTFS_PATH} \;
 
-echo "${IMAGE_HOSTNAME}" > ${ROOTFS_PATH}/etc/hostname
+# ===============================================
+# HOSTNAME
+# ===============================================
+step_log "Hostname"
+echo "${IMAGE_HOSTNAME}" > ${ROOTFS_PATH}/etc/hostname && echo "Hostname was set to ${IMAGE_HOSTNAME}"
 sed -i "s/replace-me/${IMAGE_HOSTNAME}/g" ${ROOTFS_PATH}/etc/hosts
 
 # ===============================================
 # IMAGE-TYPE: DEVELOPMENT
 # ===============================================
-if [ "${IMAGE_TYPE}" != "development" ]
-then
+if [ "${IMAGE_TYPE}" != "development" ]; then
     sed -i "s/NODM_ENABLED=false/NODM_ENABLED=true/g" ${ROOTFS_PATH}/etc/default/nodm
     sed -i "s/NODM_USER=root/NODM_USER=${IMAGE_USER}/g" ${ROOTFS_PATH}/etc/default/nodm
     sed -i "s/NODM_X_OPTIONS='-nolisten tcp'/NODM_X_OPTIONS='-nolisten tcp -nocursor'/g" ${ROOTFS_PATH}/etc/default/nodm
@@ -633,10 +654,9 @@ then
 fi
 
 # ===============================================
-# IMAGE-TYPE: PRODUCTION
+# IMAGE-TYPE: PRODUCTION - APP & ISPV
 # ===============================================
-if [ "${IMAGE_TYPE}" = "production" ]
-then
+if [ "${IMAGE_TYPE}" = "production" ]; then
     chroot "${ROOTFS_PATH}" ln -sf /data/ispv_root /ispv_root
     find ${APP_CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -a {} ${ROOTFS_PATH} \;
 fi
@@ -644,7 +664,7 @@ fi
 # ===============================================
 # PERMISSIONS / OWNER
 # ===============================================
-## configure file permissions and owner
+step_log "### Configure file permissions and owner ###"
 for PERMS in $(cat ${PERMISSIONS_CONF})
 do
     FILE_NAME=$(echo "${PERMS}" | cut -d, -f1)
@@ -655,34 +675,74 @@ do
 done
 
 # ===============================================
-# NTP
+# NTP / CHRONY
 # ===============================================
-console_log "=========================================================="
-console_log "### ntp configuration ###"
-console_log "=========================================================="
+step_log "### NTP configuration ###"
 mv ${ROOTFS_PATH}/etc/ntp.conf ${ROOTFS_PATH}/etc/ntp.conf.standard
-# copy target ntp configuration
 install -m 0644 ${ROOTFS_CONF_PATH}/etc/ntp.conf ${ROOTFS_PATH}/etc/
 #install -m 0644 ${ROOTFS_CONF_PATH}/etc/chrony.conf ${ROOTFS_PATH}/etc/
 
-console_log "=========================================================="
-console_log "### Configure sudoers ###"
-console_log "=========================================================="
+# ===============================================
+# SUDOERS
+# ===============================================
+step_log "### Configure sudoers ###"
 chroot "${ROOTFS_PATH}" chmod +w /etc/sudoers
-echo -e "\n## Polar Cutter Application Calls" >> ${ROOTFS_PATH}/etc/sudoers
-echo -e "ALL\tALL =(ALL) NOPASSWD: /bin/mount" >> ${ROOTFS_PATH}/etc/sudoers
-echo -e "ALL\tALL =(ALL) NOPASSWD: /bin/umount" >> ${ROOTFS_PATH}/etc/sudoers
-echo -e "ALL\tALL =(ALL) NOPASSWD: /bin/date" >> ${ROOTFS_PATH}/etc/sudoers
-echo -e "ALL\tALL =(ALL) NOPASSWD: /sbin/reboot" >> ${ROOTFS_PATH}/etc/sudoers
-echo -e "ALL\tALL =(ALL) NOPASSWD: /sbin/halt" >> ${ROOTFS_PATH}/etc/sudoers
-echo -e "ALL\tALL =(ALL) NOPASSWD: /sbin/hwclock" >> ${ROOTFS_PATH}/etc/sudoers
-echo -e "## ---\n" >> ${ROOTFS_PATH}/etc/sudoers
+
+cat <<EOM > ${ROOTFS_PATH}/etc/sudoers
+# Please consider adding local content in /etc/sudoers.d/ instead of
+
+Defaults        env_reset
+Defaults        mail_badpass
+Defaults        secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
+
+# User privilege specification
+root    ALL=(ALL:ALL) ALL
+
+# Members of the admin group may gain root privileges
+%admin ALL=(ALL) ALL
+
+# Allow members of group sudo to execute any command
+%sudo   ALL=(ALL:ALL) ALL
+
+# See sudoers(5) for more information on "#include" directives:
+#includedir /etc/sudoers.d
+
+## Polar Cutter Application Calls
+ALL     ALL =(ALL) NOPASSWD: /bin/mount
+ALL     ALL =(ALL) NOPASSWD: /bin/umount
+ALL     ALL =(ALL) NOPASSWD: /bin/date
+ALL     ALL =(ALL) NOPASSWD: /sbin/reboot
+ALL     ALL =(ALL) NOPASSWD: /sbin/halt
+ALL     ALL =(ALL) NOPASSWD: /sbin/hwclock
+ALL     ALL =(ALL) NOPASSWD: /usr/bin/nmcli
+## ---
+EOM
+
 chroot "${ROOTFS_PATH}" chmod -w /etc/sudoers
+# show sudeors file on console:
+cat ${ROOTFS_PATH}/etc/sudoers
 
 # ===============================================
-#  Install Kernel
+#  REDUCE ROOTFS SIZE
 # ===============================================
-if ! chroot "${ROOTFS_PATH}" ${APT_CMD} install -y linux-image-generic; then
+step_log "Remove man page files"
+rm -rv "${ROOTFS_PATH}/usr/share/doc"
+rm -rv "${ROOTFS_PATH}/usr/share/doc-base"
+rm -rv "${ROOTFS_PATH}/usr/share/man"
+rm -rv "${ROOTFS_PATH}/usr/share/man-db"
+
+
+# ===============================================
+#  VERSION FILE
+# ===============================================
+step_log "Copy version file"
+cp -v "$REPO_ROOT/version" "${ROOTFS_PATH}/opt/version"
+
+# ===============================================
+# KERNEL
+# ===============================================
+step_log "### Install Kernel ###"
+if ! chroot "${ROOTFS_PATH}" ${APT_CMD} install -y ${KERNEL_PKG}; then
     echo "ERROR: Could not install kernel."
     umount_dev_sys_proc "${ROOTFS_PATH}"
     exit 1
@@ -691,19 +751,16 @@ fi
 # ===============================================
 # OPTION: ENTER CHROOT
 # ===============================================
-if [ "${ENTER_CHROOT}" = "YES" ]
-then
+if [ "${ENTER_CHROOT}" = "YES" ]; then
+    step_log "### Enter chroot ###"
     chroot "${ROOTFS_PATH}"
 fi
 
 # ===============================================
 # IMAGE-TARGET: DEV / LOOP
 # ===============================================
-if [ "${IMAGE_TARGET_TYPE}" = "dev" -o "${IMAGE_TARGET_TYPE}" = "loop" ]
-then
-    console_log "=========================================================="
-    console_log "### Install fstab ###"
-    console_log "=========================================================="
+if [ "${IMAGE_TARGET_TYPE}" = "dev" ] || [ "${IMAGE_TARGET_TYPE}" = "loop" ]; then
+    step_log "### Install fstab ###"
     UUID_ROOTFS=$(/bin/lsblk -o UUID -n ${ROOTFS_PARTITION})
     UUID_DATAFS=$(/bin/lsblk -o UUID -n ${DATAFS_PARTITION})
     echo "Default fstab before modification:"
@@ -715,23 +772,27 @@ UUID=${UUID_ROOTFS}  /          ext4  errors=remount-ro  0  1
 UUID=${UUID_DATAFS}  /data      vfat  uid=${IMAGE_USER},gid=${IMAGE_USER}  0  2
 EOF
 # ---
-    console_log "=========================================================="
-    console_log "### Install bootloader ###"
-    console_log "=========================================================="
+    step_log "### Install grub bootloader ###"
     chmod -x "${ROOTFS_PATH}/etc/grub.d/30_os-prober"
     chroot "${ROOTFS_PATH}" grub-install --force ${IMAGE_TARGET}
     chroot "${ROOTFS_PATH}" update-grub
+    ls -al ${ROOTFS_PATH}/boot
 fi
 
+# ===============================================
+# ROOTFS DONE - SYNC
+# ===============================================
 rm -f ${POLICY_RC_D_FILE}
 sync
 
+## done with rootfs
+## unmount virt fs
 umount_dev_sys_proc "${ROOTFS_PATH}"
 
 # ===============================================
 # TARBALL / INSTALLER
 # ===============================================
-if [ "${IMAGE_TARGET_TYPE}" = "tarball" -o "${IMAGE_TARGET_TYPE}" = "installer" ]; then
+if [ "${IMAGE_TARGET_TYPE}" = "tarball" ] || [ "${IMAGE_TARGET_TYPE}" = "installer" ]; then
     step_log "### Create rootfs tarball ###"
     pushd "${ROOTFS_PATH}" &> /dev/null
     tar -cjf ${ROOTFS_TARBALL} * || exit 1
@@ -739,24 +800,31 @@ if [ "${IMAGE_TARGET_TYPE}" = "tarball" -o "${IMAGE_TARGET_TYPE}" = "installer" 
     chown $SUDO_USER "${ROOTFS_TARBALL}"
     popd &> /dev/null
 
-    if [ "${IMAGE_TARGET_TYPE}" = "installer" -o "${IMAGE_TYPE}" = "installation" ]; then
+    # NOTE: important step
+    if [ "${IMAGE_TARGET_TYPE}" = "installer" ] || [ "${IMAGE_TYPE}" = "installation" ]; then
+        step_log "### Create installer/installation ###"
+        # Create binary installer with install script and rootfs tarball
         cat "${INSTALLER_SCRIPT}" "${ROOTFS_TARBALL}" > "${INSTALLER_BINARY}"
+
+        # Change permissions and make it executeable
         chmod +x "${INSTALLER_BINARY}"
         chgrp $SUDO_GID "${INSTALLER_BINARY}"
         chown $SUDO_USER "${INSTALLER_BINARY}"
-        sudo -u $SUDO_USER ln -sf "${INSTALLER_BINARY}" "${TMP_PATH}/${IMAGE_TYPE}-image-installer-latest.bin"
-        ##echo installer done here...
-        ##ls -l "${INSTALLER_BINARY}"
+
+        # Create symlink
+        echo "Create symlink from ${INSTALLER_BINARY} to ${INSTALLER_SYMLINK}"
+        [ -L ${INSTALLER_SYMLINK} ] && sudo unlink "${INSTALLER_SYMLINK}" && echo "Old symlink was removed!"
+        sudo ln -sf "${INSTALLER_BINARY}" "${INSTALLER_SYMLINK}" || sudo -u $SUDO_USER ln -sf "${INSTALLER_BINARY}" "${INSTALLER_SYMLINK}" || echo "ERROR: Failed to create symlink!"
     fi
 fi
 
 # ===============================================
-# IMAGE-TYPE: INSTALLATION
+# IMAGE-TYPE: INSTALLATION (LIVE-CD)
 # ===============================================
 if [ "${IMAGE_TYPE}" = "installation" ]; then
     LATEST_INSTALLER_BINARY="$(readlink -f "${TMP_PATH}/${IMAGE_TYPE}-image-installer_latest.bin")"
     if [ -e "${LATEST_INSTALLER_BINARY}" ]; then
-        cp ${LATEST_INSTALLER_BINARY} "${ROOTFS_PATH}/home/${IMAGE_USER}/"
+        cp -v "${LATEST_INSTALLER_BINARY}" "${ROOTFS_PATH}/home/${IMAGE_USER}/"
     else
         console_log "Image installer binary not found!"
         console_log "Please create a ${IMAGE_TYPE} image installer binary first!"
@@ -768,7 +836,7 @@ fi
 # ===============================================
 # IMAGE-TYPE: DEV / LOOP
 # ===============================================
-if [ "${IMAGE_TARGET_TYPE}" = "dev" -o "${IMAGE_TARGET_TYPE}" = "loop" ]; then
+if [ "${IMAGE_TARGET_TYPE}" = "dev" ] || [ "${IMAGE_TARGET_TYPE}" = "loop" ]; then
     losetup -D
     umount "${DATAFS_PATH}"
     umount "${ROOTFS_PATH}"

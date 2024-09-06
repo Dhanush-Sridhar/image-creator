@@ -1,54 +1,49 @@
-NAME=project
-VERSION=0.0.1
+.PHONY: pull installer live-os clean show-version tag all
 
-DIRS=etc lib bin sbin share
-INSTALL_DIRS=`find $(DIRS) -type d 2>/dev/null`
-INSTALL_FILES=`find $(DIRS) -type f 2>/dev/null`
-DOC_FILES=*.md *.txt
+VERSION = $(cat version)
 
-PKG_DIR=pkg
-PKG_NAME=$(NAME)-$(VERSION)
-PKG=$(PKG_DIR)/$(PKG_NAME).tar.gz
-SIG=$(PKG_DIR)/$(PKG_NAME).asc
+#Pulls debian packages from Nexus apt repo or S3 (quick and dirty yet)
+pull:
+	./scripts/pull-packages.sh
 
-PREFIX?=/usr/local
-DOC_DIR=$(PREFIX)/share/doc/$(PKG_NAME)
+installer:
+	./scripts/image-creator.sh
 
-pkg:
-	mkdir -p $(PKG_DIR)
-
-$(PKG): pkg
-	git archive --output=$(PKG) --prefix=$(PKG_NAME)/ HEAD
-
-build: $(PKG)
-
-$(SIG): $(PKG)
-	gpg --sign --detach-sign --armor $(PKG)
-
-sign: $(SIG)
+live-os:
+	./scripts/liveos-creator.sh --all-img
 
 clean:
-	rm -f $(PKG) $(SIG)
-
-all: $(PKG) $(SIG)
-
-test:
+	#./scripts/cleanup.sh
+	./scripts/image-creator.sh --clean
 
 tag:
 	git tag v$(VERSION)
 	git push --tags
 
-release: $(PKG) $(SIG) tag
+show-version:
+	@echo $(value VERSION)
 
-install:
-	for dir in $(INSTALL_DIRS); do mkdir -p $(PREFIX)/$$dir; done
-	for file in $(INSTALL_FILES); do cp $$file $(PREFIX)/$$file; done
-	mkdir -p $(DOC_DIR)
-	cp -r $(DOC_FILES) $(DOC_DIR)/
-
-uninstall:
-	for file in $(INSTALL_FILES); do rm -f $(PREFIX)/$$file; done
-	rm -rf $(DOC_DIR)
+all:
+	./scripts/image-creator.sh
+	./scripts/liveos-creator.sh --all-img
 
 
-.PHONY: build sign clean test tag release install uninstall all
+# show help
+help:
+	@echo "======================================================================"
+	@echo "                   Polar OS Image Creator v1.0"
+	@echo "======================================================================"
+	@echo "  Creator: 	Dhanush Sridhar, Suria Redddy"
+	@echo "  Date:		09/2024"
+	@echo
+	@echo " USAGE: make [OPTION]"
+	@echo
+	@echo " OPTIONS:"
+	@echo "  all         		Execute all scripts to build an installer and live system."
+	@echo "  pull	     		Pull debian packages from Nexus/S3"
+	@echo "  installer		    Build the Polar OS rootfs and the binary installer."
+	@echo "  live-os      		Build the Live System as .img file."
+	@echo "  clean      		Call cleanup script (not implemented yet)."
+	@echo
+	@echo "  help        		Show this help"
+	@echo "======================================================================"

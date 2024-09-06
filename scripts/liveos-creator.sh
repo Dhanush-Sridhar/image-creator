@@ -5,8 +5,9 @@ set -eo pipefail
 REPO_ROOT=$(git rev-parse --show-toplevel) 
 
 echo "Load configuration ..."
-BUILD_CONFIG=$REPO_ROOT/config/build.conf
+BUILD_CONFIG=$REPO_ROOT/scripts/build.conf
 source $BUILD_CONFIG && echo "$BUILD_CONFIG was sourced!" || echo "Failed to source config: $BUILD_CONFIG"
+
 HELPER_FUNCTIONS=$REPO_ROOT/scripts/helpers.sh
 source $HELPER_FUNCTIONS && echo "$HELPER_FUNCTIONS was sourced!" || echo "Failed to source config: $BUILD_CONFIG"
 
@@ -139,7 +140,7 @@ EOF
 
     # Copy binary installer into rootfs
     if [ ! -e $BINARY_INSTALLER ] ; then
-        echo "Binary Installer $BINARY_INSTALLER symlink not found!"
+        echo "Binary Installer $BINARY_INSTALLER symlink not found!" && exit 1
     else
         cp -v $BINARY_INSTALLER $ROOTFS_LIVE_DIR/root/ || echo "Failed to copy binary installer to image"
     fi
@@ -359,6 +360,8 @@ function test_iso(){
 function test_img(){
     if ! test -f $IMAGE_FILE_LATEST_SYMLINK; then echo "No Image file found! Create image first with --img."; exit 1; fi
     #UEFI:qemu-system-x86_64 -enable-kvm -boot menu=on -bios /usr/share/ovmf/OVMF.fd -m 4G -cpu host -smp 2 -vga virtio -display sdl,gl=on -drive format=raw,file=$IMAGE_FILE_LATEST_SYMLINK
+
+    # HINT for WSL2:  export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0 && echo $DISPLAY
     qemu-system-x86_64  -boot menu=on -m 4G  -smp 2 -vga virtio -display sdl,gl=on -drive format=raw,file=$IMAGE_FILE_LATEST_SYMLINK
 }
 
