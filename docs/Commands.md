@@ -26,7 +26,12 @@ Default: amd64
 Default: focal
 `--distro <distribution-string>`
 
-
+### MACHINE
+- Type of Machine for which the image is beeing built 
+- takes only three specific values which are as follows nplus, nprohd , pure.
+- each machine type have therir own config files for setiings related to specific machines types.
+   The convention of the config file is `${MACHINE}-imageconf example` `nplus-image.conf`, and is 
+   to be stored under the path `{repo_root}/scripts/config/`
 ### Image Target
 
 Specify the image target. 
