@@ -1,15 +1,14 @@
 #!/bin/bash
-
 # allows tracing output separated from error messages
 [ ! -z "${DEBUG}" ] && set -x
 
 REPO_ROOT=$(git rev-parse --show-toplevel)
 
 echo "Load configuration ..."
-BUILD_CONFIG=$REPO_ROOT/scripts/build.conf
+BUILD_CONFIG=$REPO_ROOT/scripts/config/build.conf
 source $BUILD_CONFIG && echo "$BUILD_CONFIG was sourced!" || echo "Failed to source config: $BUILD_CONFIG"
 
-IMAGE_CONFIG=$REPO_ROOT/scripts/image.conf
+IMAGE_CONFIG=$REPO_ROOT/scripts/config/${MACHINE}-image.conf
 source $IMAGE_CONFIG && echo "$IMAGE_CONFIG was sourced!" || echo "Failed to source config: $IMAGE_CONFIG"
 
 HELPERS=$REPO_ROOT/scripts/helpers.sh
@@ -101,12 +100,7 @@ function console_log() {
     echo "$1"
 }
 
-function step_log() {
-    echo
-    echo "======================================="
-    echo "$1"
-    echo "======================================="
-}
+
 
 function error() {
     echo "$1"
@@ -120,6 +114,7 @@ function print_env() {
     echo "Distro: ${DISTRO}"
     echo "Image Type: ${IMAGE_TYPE}"
     echo "Image Target: ${IMAGE_TARGET}"
+    echo "Machine Type : ${MACHINE}"
     echo
 }
 
@@ -464,16 +459,43 @@ fi
 # ===============================================
 # create an initial rootfs using debootstrap
 # ===============================================
-if [ ! -e "${ROOTFS_PATH}/etc/os-release" ]; then
-    step_log "### Create rootfs ### "
+# remove rootfs if exists
+if [ -e " ${ROOTFS_PATH}/etc/os-release" ]; then
+    rm -r ${ROOTFS_PATH}/*   
+fi
 
-    if [ "${ARCH}" != "i386" ] && [ "${ARCH}" != "amd64" ]; then
-        HOSTNAME=${IMAGE_HOSTNAME} ${QEMU_DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH} #--include="${PKG_BASE_IMAGE}"
+# check if full image cache exists
+if [ -e "${ROOTFS_FULL_CACHE_PATH}/etc/os-release" ]; then
+    step_log "### Copy rootfs from full cache ###"
+    cp -r ${ROOTFS_FULL_CACHE_PATH}/* ${ROOTFS_PATH}
+else
+    # check if full image cache exists
+    if [ -e "${ROOTFS_BASE_CACHE_PATH}/etc/os-release" ]; then
+        step_log "### Copy rootfs from base cache ###"
+        cp -r ${ROOTFS_BASE_CACHE_PATH}/* ${ROOTFS_PATH}
+    
     else
-        HOSTNAME=${IMAGE_HOSTNAME} ${DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH} #--include="${PKG_BASE_IMAGE}"
+        step_log "### Create rootfs from scratch ###"
+        if [ "${ARCH}" != "i386" ] && [ "${ARCH}" != "amd64" ]; then
+            HOSTNAME=${IMAGE_HOSTNAME} ${QEMU_DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH}
+        else
+            HOSTNAME=${IMAGE_HOSTNAME} ${DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH}
+        fi
+
+        # install kernel
+        step_log "### Install Kernel ###"
+        if ! chroot "${ROOTFS_PATH}" ${APT_CMD} install -y ${KERNEL_PKG}; then
+            echo "ERROR: Could not install kernel."
+            exit 1
+        fi
+        
+        # create cache  of roofts
+        mkdir -p ${ROOTFS_BASE_CACHE_PATH}
+        cp -r ${ROOTFS_PATH}/* ${ROOTFS_BASE_CACHE_PATH}
     fi
 fi
-DISTRO_ID="$(source ${TMP_PATH}/rootfs/etc/os-release && echo $ID)"
+
+DISTRO_ID="$(source ${ROOTFS_PATH}/etc/os-release && echo $ID)"
 
 mount_dev_sys_proc "${ROOTFS_PATH}"
 
@@ -499,9 +521,16 @@ if [ "${DISTRO_ID}" = "ubuntu" ]; then
         echo "deb ${REPO_URL} ${REPO} ${REPO_COMPONENTS}" >> "${ROOTFS_PATH}/etc/apt/sources.list"
         #echo "deb-src ${REPO_URL} ${REPO} ${REPO_COMPONENTS}" >> "${ROOTFS_PATH}/etc/apt/sources.list"
     done
+
+    if [ $INSTALL_NEXUS_PKG == 1 ]; then
+         ## add nexus key to keyring
+         wget -O ${ROOTFS_PATH}/${KEYRING_PATH} ${NEXUS_REPO_KEYRING}
+         ## add nexus repository to source list 
+        echo "deb [arch=${ARCH} signed-by=${KEYRING_PATH}]  ${NEXUS_APT_URL}" >> "${ROOTFS_PATH}/etc/apt/sources.list"
+    fi
     
     if [ "${IMAGE_TYPE}" != "installation" ]; then
-        chroot ${ROOTFS_PATH} ${APT_CMD} update 
+        chroot ${ROOTFS_PATH} ${APT_CMD} update  
         chroot ${ROOTFS_PATH} ${APT_CMD} -y install software-properties-common
         #chroot ${ROOTFS_PATH} add-apt-repository -y ppa:beineri/opt-qt-${QT_VERSION}-${DISTRO}
     fi
@@ -531,14 +560,38 @@ POLICY_RC_D_FILE="${ROOTFS_PATH}/usr/sbin/policy-rc.d"
 install -m 0644 ${ROOTFS_CONF_PATH}/policy-rc.d ${POLICY_RC_D_FILE}
 chroot ${ROOTFS_PATH} ${APT_CMD} -y dist-upgrade
 
+# ===============================================
+# USER MANAGEMENT
+# ===============================================
+step_log "### User management ###"
+
+echo -e "${IMAGE_PASSWORD}\n${IMAGE_PASSWORD}\n" | chroot ${ROOTFS_PATH} passwd root
+
+chroot ${ROOTFS_PATH} adduser --gecos "" --disabled-password ${IMAGE_USER}
+chroot ${ROOTFS_PATH} usermod -a -G sudo,video,audio,plugdev ${IMAGE_USER}
+
+chroot ${ROOTFS_PATH} adduser --gecos "" --disabled-password --force-badname BoxPC     #TODO: changePW
+echo -e "BoxPC\nBoxPC\n" | chroot ${ROOTFS_PATH} passwd BoxPC                          #TODO: changePW
+
+echo -e "${IMAGE_PASSWORD}\n${IMAGE_PASSWORD}\n" | chroot ${ROOTFS_PATH} passwd ${IMAGE_USER}
 
 # ===============================================
 # INSTALL PACKAGES
 # ===============================================
 step_log "### Install packages in rootfs ###"
 chroot ${ROOTFS_PATH} ${APT_CMD} update
-chroot ${ROOTFS_PATH} ${APT_CMD} -y install ${IMAGE_PACKAGE_LIST}
+output=$(chroot ${ROOTFS_PATH} ${APT_CMD} -y install ${IMAGE_PACKAGE_LIST} 2>&1)
+if  [ $? -ne 0 ]; then
+    
+    console_log "Error: $output Failed to install packages!"
+    umount_dev_sys_proc "${ROOTFS_PATH}"
+    exit 1
+fi
+if [ $INSTALL_NEXUS_PKG == 1 ]; then
+    chroot ${ROOTFS_PATH} ${APT_CMD} -y install ${NEXUS_PACKAGES}
+fi
 chroot ${ROOTFS_PATH} ${APT_CMD} -y clean
+breakPoint "INSTALL PACKAGES"
 
 # ===============================================
 # INSTALL POLAR PACKAGES
@@ -580,7 +633,6 @@ if [ "${IMAGE_TYPE}" != "installation" ]; then
     install_fonts
 fi
 
-
 # ===============================================
 # WIFI
 # ===============================================
@@ -608,26 +660,19 @@ EOF
 fi
 
 
-# ===============================================
-# USER MANAGEMENT
-# ===============================================
-step_log "### User management ###"
-
-echo -e "${IMAGE_PASSWORD}\n${IMAGE_PASSWORD}\n" | chroot ${ROOTFS_PATH} passwd root
-
-chroot ${ROOTFS_PATH} adduser --gecos "" --disabled-password ${IMAGE_USER}
-chroot ${ROOTFS_PATH} usermod -a -G sudo,video,audio,plugdev ${IMAGE_USER}
-
-chroot ${ROOTFS_PATH} adduser --gecos "" --disabled-password --force-badname BoxPC     #TODO: changePW
-echo -e "BoxPC\nBoxPC\n" | chroot ${ROOTFS_PATH} passwd BoxPC                          #TODO: changePW
-
-echo -e "${IMAGE_PASSWORD}\n${IMAGE_PASSWORD}\n" | chroot ${ROOTFS_PATH} passwd ${IMAGE_USER}
 
 # ===============================================
 # COPY CONFIG FILES TO ROOTFS
 # ===============================================
 step_log "### Install (pre)config files to rootfs ###"
 find ${ROOTFS_CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -r {} ${ROOTFS_PATH} \;
+
+# ===============================================
+# reconfigure NetworkFiles
+# ===============================================
+step_log "### Configuring NetworkManager Files ###"
+rm -r ${ROOTFS_PATH}/etc/NetworkManager/system-connections/*
+cp ${ROOTFS_CONF_PATH}/etc/NetworkManager/system-connections/${MACHINE}/* ${ROOTFS_PATH}/etc/NetworkManager/system-connections/
 
 # ===============================================
 # HOSTNAME
@@ -645,7 +690,7 @@ if [ "${IMAGE_TYPE}" != "development" ]; then
     sed -i "s/NODM_X_OPTIONS='-nolisten tcp'/NODM_X_OPTIONS='-nolisten tcp -nocursor'/g" ${ROOTFS_PATH}/etc/default/nodm
 
     mkdir -p ${ROOTFS_PATH}/home/${IMAGE_USER}/.config/openbox
-    install -m 0644 ${ROOTFS_CONF_PATH}/autostart ${ROOTFS_PATH}/home/${IMAGE_USER}/.config/openbox
+    install -m 0644 ${ROOTFS_CONF_PATH}/autostart-${MACHINE} ${ROOTFS_PATH}/home/${IMAGE_USER}/.config/openbox/autostart
     chroot "${ROOTFS_PATH}" chown -R ${IMAGE_USER}:${IMAGE_USER} /home/${IMAGE_USER}/.config/
 
     mkdir -p ${ROOTFS_PATH}/home/${IMAGE_USER}/.vnc/
@@ -722,6 +767,7 @@ chroot "${ROOTFS_PATH}" chmod -w /etc/sudoers
 # show sudeors file on console:
 cat ${ROOTFS_PATH}/etc/sudoers
 
+
 # ===============================================
 #  REDUCE ROOTFS SIZE
 # ===============================================
@@ -738,15 +784,6 @@ rm -rv "${ROOTFS_PATH}/usr/share/man-db"
 step_log "Copy version file"
 cp -v "$REPO_ROOT/version" "${ROOTFS_PATH}/opt/version"
 
-# ===============================================
-# KERNEL
-# ===============================================
-step_log "### Install Kernel ###"
-if ! chroot "${ROOTFS_PATH}" ${APT_CMD} install -y ${KERNEL_PKG}; then
-    echo "ERROR: Could not install kernel."
-    umount_dev_sys_proc "${ROOTFS_PATH}"
-    exit 1
-fi
 
 # ===============================================
 # OPTION: ENTER CHROOT
@@ -788,6 +825,13 @@ sync
 ## done with rootfs
 ## unmount virt fs
 umount_dev_sys_proc "${ROOTFS_PATH}"
+
+
+# ===============================================
+# CREATE ROOTFS CACHE
+# ===============================================
+mkdir -p $ROOTFS_FULL_CACHE_PATH
+cp -r ${ROOTFS_PATH}/* $ROOTFS_FULL_CACHE_PATH
 
 # ===============================================
 # TARBALL / INSTALLER

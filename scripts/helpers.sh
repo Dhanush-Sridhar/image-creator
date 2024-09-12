@@ -36,6 +36,13 @@ function logstep()
     STEPCOUNTER=$((STEPCOUNTER+1))
 }
 
+
+function step_log() {
+    echo
+    echo "======================================="
+    echo "$1"
+    echo "======================================="
+}
 #Check if root user
 function checkRoot(){
 if [ $UID != 0 ]; then 
@@ -43,6 +50,12 @@ if [ $UID != 0 ]; then
  #echo "Not a root user! - `date` ">> Errlog.txt
  exit 1
 fi
+}
+
+function breakPoint(){
+    echo "at $1"
+    echo "Press any key to continue..."
+    read -n 1 -s
 }
 
 ###

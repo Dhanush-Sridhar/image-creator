@@ -5,8 +5,11 @@ set -eo pipefail
 REPO_ROOT=$(git rev-parse --show-toplevel) 
 
 echo "Load configuration ..."
-BUILD_CONFIG=$REPO_ROOT/scripts/build.conf
+BUILD_CONFIG=$REPO_ROOT/scripts/config/build.conf
 source $BUILD_CONFIG && echo "$BUILD_CONFIG was sourced!" || echo "Failed to source config: $BUILD_CONFIG"
+
+IMAGE_CONFIG=$REPO_ROOT/scripts/config/${MACHINE}-image.conf
+source $IMAGE_CONFIG && echo "$IMAGE_CONFIG was sourced!" || echo "Failed to source config: $IMAGE_CONFIG"
 
 HELPER_FUNCTIONS=$REPO_ROOT/scripts/helpers.sh
 source $HELPER_FUNCTIONS && echo "$HELPER_FUNCTIONS was sourced!" || echo "Failed to source config: $BUILD_CONFIG"
@@ -17,10 +20,10 @@ readonly ROOTFS_IMAGE_CREATOR_DIR="$TMP_DIR/rootfs"
 readonly ROOTFS_LIVE_DIR="$TMP_DIR/live-rootfs"
 readonly ISO_NAME="$TMP_DIR/polar-live-$(date +"%Y%m%d").iso"
 readonly ISO_NAME_LATEST="$TMP_DIR/polar-live-latest.iso"
-readonly IMAGE_FILE="$TMP_DIR/polar-live-$(date +"%Y%m%d").img"
+readonly IMAGE_FILE="$TMP_DIR/polar-live-${MACHINE}-$(date +"%Y%m%d").img"
 readonly IMAGE_FILE_LATEST_SYMLINK="$TMP_DIR/polar-live-latest.img"
-readonly BOOT_PARTITION_SIZE=20 # in MB
-readonly ROOT_PARTITION_KERNEL_SIZE=2600 # in MB (vmlinuz + initrd.img)
+
+readonly BUFFER_ROOTFS_SIZE=200 # in MB
 readonly BOOT_MNT=/mnt/boot
 readonly ROOT_MNT="$TMP_DIR/mnt"
 
@@ -100,13 +103,36 @@ function host_setup(){
 function create_rootfs(){
 
     mkdir -p $ROOTFS_LIVE_DIR
-    echo "Create RootFS of $LIVE_SYS_DISTRO in $ROOTFS_LIVE_DIR "
-    debootstrap --variant=minbase --arch=$ARCH $LIVE_SYS_DISTRO $ROOTFS_LIVE_DIR $REPO
+    step_log "Create Live RootFS of $DISTRO in $ROOTFS_LIVE_DIR "
+
+    if [ -e ${ROOTFS_LIVE_DIR}/etc/os-release ]; then 
+        rm -r ${ROOTFS_LIVE_DIR}
+    fi
+
+
+    # check if cache exists
+    if [ -e "${ROOTFS_BASE_CACHE_PATH}/etc/os-release" ]; then
+        step_log "### Copy rootfs from base cache ###"
+        cp -r ${ROOTFS_BASE_CACHE_PATH}/* ${ROOTFS_LIVE_DIR}
+    else
+        debootstrap --variant=minbase --arch=$ARCH $DISTRO $ROOTFS_LIVE_DIR $REPO
+
+        #install kernal 
+        step_log "### Install Kernel ###"
+        if ! chroot "${ROOTFS_LIVE_DIR}" apt install -y linux-image-generic; then
+            echo "ERROR: Could not install kernel."
+            exit 1
+        fi
+
+        mkdir -p $ROOTFS_BASE_CACHE_PATH
+        cp -r ${ROOTFS_LIVE_DIR}/* ${ROOTFS_BASE_CACHE_PATH}/
+    fi
     mount_virtfs $ROOTFS_LIVE_DIR
 
     # Configure rootfs
-    chroot $ROOTFS_LIVE_DIR apt update
-    chroot $ROOTFS_LIVE_DIR apt install -y --no-install-recommends $PACKAGES
+    step_log "### updating and installing apt packages  ###"
+    #chroot $ROOTFS_LIVE_DIR apt update
+    chroot ${ROOTFS_LIVE_DIR} apt install -y $PACKAGES
 
 
 ## Auto-Login
@@ -172,7 +198,7 @@ function create_img(){
     readonly KBYTE=1024
     
     # calculate the size of the image file
-    DD_Count=$(echo "$ROOT_PARTITION_SIZE+($ROOT_PARTITION_KERNEL_SIZE*$KBYTE)" | bc)
+    DD_Count=$(echo "$ROOT_PARTITION_SIZE+($BUFFER_ROOTFS_SIZE*$KBYTE)" | bc)
 
     # convert the size to human readable format just for display
     Image_Size=$((echo "$DD_Count*$KBYTE" | bc) | numfmt --to=si)
@@ -199,9 +225,15 @@ function create_img(){
     # create persitant loop device for further use
     mkdir -p $LOOP_DEV_NAME
     ln -s $LOOP_DEV $LOOP_DEV_NAME
+    
+    if [ $? -ne 0  ]; then       
+        echo "ERROR: Could not create loop device."
+        clean_img
+        exit 1
+    fi
 
 
-    # Create the file system
+   # Create the file system
     mkfs.ext4 ${LOOP_DEV}p1 && echo "Rootfs partition created" || echo "Could not create rootfs partition."
 
 
@@ -233,15 +265,7 @@ function create_img(){
  #mount dev, proc and sys
     mount_virtfs $ROOT_MNT
 
-    #Install Kernal 
-    if ! chroot $ROOT_MNT apt install -y linux-image-generic; then
-        echo "ERROR: Could not install kernel."
-       clean_img
-       exit 1
-    fi
-
-   
-   
+      
 
      # install grub BIOS bootloader
     grub-install --target=i386-pc --boot-directory=$ROOT_MNT/boot --recheck $LOOP_DEV
