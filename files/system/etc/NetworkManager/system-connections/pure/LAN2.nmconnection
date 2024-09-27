@@ -3,7 +3,7 @@ id=LAN2
 uuid=626cdfb0-1823-3158-927e-db166af0e64f
 type=ethernet
 autoconnect-priority=-999
-interface-name=enp4s0
+interface-name=enp1s0
 permissions=
 timestamp=1606153054
 

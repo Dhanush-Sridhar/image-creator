@@ -6,10 +6,10 @@ REPO_ROOT=$(git rev-parse --show-toplevel)
 
 echo "Load configuration ..."
 BUILD_CONFIG=$REPO_ROOT/scripts/config/build.conf
-source $BUILD_CONFIG && echo "$BUILD_CONFIG was sourced!" || echo "Failed to source config: $BUILD_CONFIG"
+source $BUILD_CONFIG && echo "$BUILD_CONFIG was sourced!" || echo "Failed to source config: $BUILD_CONFIG" | exit 1
 
 IMAGE_CONFIG=$REPO_ROOT/scripts/config/${MACHINE}-image.conf
-source $IMAGE_CONFIG && echo "$IMAGE_CONFIG was sourced!" || echo "Failed to source config: $IMAGE_CONFIG"
+source $IMAGE_CONFIG && echo "$IMAGE_CONFIG was sourced!" || { echo "Failed to source config: $IMAGE_CONFIG. please check the if the machine type is valid  " ; exit 1; }
 
 HELPERS=$REPO_ROOT/scripts/helpers.sh
 source $HELPERS && echo "$HELPERS was sourced!" || echo "Failed to source config: $HELPERS"
@@ -20,7 +20,7 @@ source $HELPERS && echo "$HELPERS was sourced!" || echo "Failed to source config
 VERSION_FILE=$REPO_ROOT/version
 VERSION=$(cat version) || echo "Failed to read version file: $VERSION_FILE"
 
-readonly KERNEL_PKG=linux-image-generic
+
 DEBOOTSTRAP_CMD="$(which debootstrap)"
 QEMU_DEBOOTSTRAP_CMD="$(which qemu-debootstrap)"
 
@@ -206,19 +206,27 @@ function mount_rootfs_datafs() {
 # ===============================================
 # FUNCTIONS - INSTALL POLAR FONT
 # ===============================================
-readonly FONT_CONF_DIR="${ROOTFS_CONF_PATH}/font/polar/"
-readonly FONT_ROOTFS_DIR="${ROOTFS_PATH}/usr/share/fonts/truetype/polar"
 
-function install_fonts() {
-    mkdir -p ${FONT_ROOTFS_DIR}
-    local font_files=("arialuni.ttf" "fonts.dir" "fonts.scale")
-    for file in "${font_files[@]}"; do
-        install -m 0644 "${FONT_CONF_DIR}/${file}" "${FONT_ROOTFS_DIR}/${file}" && console_log "Font file ${file} installed successfully."
-        if [ $? -ne 0 ]; then
-            console_log "Error: Failed to install font file ${file}."
-        fi
-    done
-}
+if [ $INSTALL_POLAR_FONT -eq 1 ]; then
+    step_log "### Install Polar fonts ###"
+ 
+    readonly FONT_CONF_DIR="${ROOTFS_CONF_PATH}/font/polar/"
+    readonly FONT_ROOTFS_DIR="${ROOTFS_PATH}/usr/share/fonts/truetype/polar"
+
+    function install_fonts() {
+        mkdir -p ${FONT_ROOTFS_DIR}
+        local font_files=("arialuni.ttf" "fonts.dir" "fonts.scale")
+        for file in "${font_files[@]}"; do
+            install -m 0644 "${FONT_CONF_DIR}/${file}" "${FONT_ROOTFS_DIR}/${file}" && console_log "Font file ${file} installed successfully."
+            if [ $? -ne 0 ]; then
+                console_log "Error: Failed to install font file ${file}."
+            fi
+        done
+    }
+else
+    step_log "### remove Polar fonts ###"
+    rm -r ${ROOTFS_PATH}/fonts
+fi
 
 
 # ===============================================
@@ -299,7 +307,7 @@ root_check
 # ===============================================
 if [ -z "${DEBOOTSTRAP_CMD}" ] || [ -z "${QEMU_DEBOOTSTRAP_CMD}" ]; then
     step_log "### Installing needed host packages ###"
-    ${APT_CMD} update
+    ${APT_CMD} update 
     ${APT_CMD} -y install debootstrap qemu-user-static || error "Could not install host packages!"
     DEBOOTSTRAP_CMD="$(which debootstrap)"
     QEMU_DEBOOTSTRAP_CMD="$(which qemu-debootstrap)"
@@ -391,10 +399,10 @@ if [ ! -z "${IMAGE_TYPE}" ]
 then
     case ${IMAGE_TYPE} in
         production)
-            IMAGE_PACKAGE_LIST="${PKG_RUNTIME_IMAGE}"
+            IMAGE_PACKAGE_LIST="${PKG_BASE_IMAGE} ${PKG_RUNTIME_IMAGE}"
             ;;
         development)
-            IMAGE_PACKAGE_LIST="${PKG_DEV_IMAGE}"
+            IMAGE_PACKAGE_LIST="${PKG_BASE_IMAGE} ${PKG_DEV_IMAGE}"
             ;;
         installation)
             IMAGE_PACKAGE_LIST="${PKG_INSTALLATION_IMAGE} ${PKG_RUNTIME_IMAGE}"
@@ -410,6 +418,14 @@ then
     ROOTFS_IMAGE_FILE="${ROOTFS_IMAGE_FILE//rootfs/rootfs-${IMAGE_TYPE}}"
     ROOTFS_TARBALL="${ROOTFS_TARBALL//rootfs/rootfs-${IMAGE_TYPE}}"
 fi
+# remove rootfs if exists
+umount_dev_sys_proc "${ROOTFS_PATH}"
+
+if [ -d "${ROOTFS_PATH}" ]; then
+    step_log "### removing exsisting rootfs###"
+    rm -r ${ROOTFS_PATH}
+fi
+
 
 mkdir -p "${ROOTFS_PATH}"
 sudo -u $SUDO_USER mkdir -p "${PKG_DEB_PATH}" "${PKG_TARBALLS_PATH}" "${PKG_BINARIES_PATH}"
@@ -425,6 +441,7 @@ print_env
 # IMAGE-TARGET: LOOP
 # ===============================================
 if [ "${IMAGE_TARGET_TYPE}" = "loop" ]; then
+
     if [ ! -e "${ROOTFS_IMAGE_FILE}" ]; then
         dd if=/dev/zero of="${ROOTFS_IMAGE_FILE}" bs=100M count=160
     fi
@@ -459,41 +476,31 @@ fi
 # ===============================================
 # create an initial rootfs using debootstrap
 # ===============================================
-# remove rootfs if exists
-if [ -e " ${ROOTFS_PATH}/etc/os-release" ]; then
-    rm -r ${ROOTFS_PATH}/*   
-fi
+
 
 # check if full image cache exists
-if [ -e "${ROOTFS_FULL_CACHE_PATH}/etc/os-release" ]; then
-    step_log "### Copy rootfs from full cache ###"
-    cp -r ${ROOTFS_FULL_CACHE_PATH}/* ${ROOTFS_PATH}
-else
-    # check if full image cache exists
-    if [ -e "${ROOTFS_BASE_CACHE_PATH}/etc/os-release" ]; then
-        step_log "### Copy rootfs from base cache ###"
-        cp -r ${ROOTFS_BASE_CACHE_PATH}/* ${ROOTFS_PATH}
-    
-    else
-        step_log "### Create rootfs from scratch ###"
-        if [ "${ARCH}" != "i386" ] && [ "${ARCH}" != "amd64" ]; then
-            HOSTNAME=${IMAGE_HOSTNAME} ${QEMU_DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH}
-        else
-            HOSTNAME=${IMAGE_HOSTNAME} ${DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH}
-        fi
+if [ -e "${ROOTFS_BASE_CACHE_PATH}/etc/os-release" ]; then
 
-        # install kernel
-        step_log "### Install Kernel ###"
-        if ! chroot "${ROOTFS_PATH}" ${APT_CMD} install -y ${KERNEL_PKG}; then
-            echo "ERROR: Could not install kernel."
-            exit 1
-        fi
-        
-        # create cache  of roofts
-        mkdir -p ${ROOTFS_BASE_CACHE_PATH}
-        cp -r ${ROOTFS_PATH}/* ${ROOTFS_BASE_CACHE_PATH}
+    step_log "### Copy rootfs from base cache ###"
+    cp -r ${ROOTFS_BASE_CACHE_PATH}/* ${ROOTFS_PATH}
+    chroot ${ROOTFS_PATH} chmod 666 /dev/null
+    chroot ${ROOTFS_PATH} chown root:root /dev/null
+    chroot ${ROOTFS_PATH}  chmod 1777 /tmp
+    chroot ${ROOTFS_PATH}  chown root:root /tmp
+
+else
+    step_log "### Create rootfs from scratch ###"
+    if [ "${ARCH}" != "i386" ] && [ "${ARCH}" != "amd64" ]; then
+        HOSTNAME=${IMAGE_HOSTNAME} ${QEMU_DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH}
+    else
+        HOSTNAME=${IMAGE_HOSTNAME} ${DEBOOTSTRAP_CMD} --no-check-gpg ${DEBOOTSTRAP_OPTIONS} --arch=${ARCH} ${DISTRO} ${ROOTFS_PATH}
     fi
+
+    # create cache  of roofts
+    mkdir -p ${ROOTFS_BASE_CACHE_PATH}
+    cp -r ${ROOTFS_PATH}/* ${ROOTFS_BASE_CACHE_PATH}
 fi
+
 
 DISTRO_ID="$(source ${ROOTFS_PATH}/etc/os-release && echo $ID)"
 
@@ -502,9 +509,11 @@ mount_dev_sys_proc "${ROOTFS_PATH}"
 # ===============================================
 # create the sources.list files for apt:
 # ===============================================
-step_log "### Create sources.list ###"
+
 
 if [ "${DISTRO_ID}" = "ubuntu" ]; then
+    step_log "### Create sources.list ###"
+ 
     TMP_REPOS="${DISTRO} ${DISTRO}-updates ${DISTRO}-security ${DISTRO}-backports"
     if [ "${ARCH}" = "armel" -a "${ARCH}" = "armhf" ]; then
         REPO_URL="http://de.archive.ubuntu.com/ubuntu"
@@ -536,11 +545,7 @@ if [ "${DISTRO_ID}" = "ubuntu" ]; then
     fi
 fi
 
-# ===============================================
-# LOCALES
-# ===============================================
-step_log "### Configure locales ###"
-chroot ${ROOTFS_PATH} locale-gen de_DE.UTF-8
+
 
 
 # ===============================================
@@ -580,7 +585,8 @@ echo -e "${IMAGE_PASSWORD}\n${IMAGE_PASSWORD}\n" | chroot ${ROOTFS_PATH} passwd 
 # ===============================================
 step_log "### Install packages in rootfs ###"
 chroot ${ROOTFS_PATH} ${APT_CMD} update
-output=$(chroot ${ROOTFS_PATH} ${APT_CMD} -y install ${IMAGE_PACKAGE_LIST} 2>&1)
+chroot ${ROOTFS_PATH} ${APT_CMD} -y upgrade
+output=$(chroot ${ROOTFS_PATH} ${APT_CMD} -y install ${IMAGE_PACKAGE_LIST} 2>&1 | tee /dev/tty)
 if  [ $? -ne 0 ]; then
     
     console_log "Error: $output Failed to install packages!"
@@ -591,7 +597,6 @@ if [ $INSTALL_NEXUS_PKG == 1 ]; then
     chroot ${ROOTFS_PATH} ${APT_CMD} -y install ${NEXUS_PACKAGES}
 fi
 chroot ${ROOTFS_PATH} ${APT_CMD} -y clean
-breakPoint "INSTALL PACKAGES"
 
 # ===============================================
 # INSTALL POLAR PACKAGES
@@ -660,6 +665,22 @@ EOF
 fi
 
 
+# ===============================================
+# INSTALL KERNAL 
+# ===============================================
+step_log "### Install Kernel ###"
+if ! chroot "${ROOTFS_PATH}" ${APT_CMD} install -y ${KERNEL_PKG}; then
+    echo "ERROR: Could not install kernel."
+    exit 1
+fi
+
+
+# ===============================================
+# LOCALES
+# ===============================================
+step_log "### Configure locales ###"
+chroot ${ROOTFS_PATH} locale-gen de_DE.UTF-8
+
 
 # ===============================================
 # COPY CONFIG FILES TO ROOTFS
@@ -682,6 +703,13 @@ echo "${IMAGE_HOSTNAME}" > ${ROOTFS_PATH}/etc/hostname && echo "Hostname was set
 sed -i "s/replace-me/${IMAGE_HOSTNAME}/g" ${ROOTFS_PATH}/etc/hosts
 
 # ===============================================
+# Keyboard Settings
+# ===============================================
+sudo sed -i 's/XKBLAYOUT=".*"/XKBLAYOUT="de"/' ${ROOTFS_PATH}/etc/default/keyboard
+chroot ${ROOTFS_PATH} loadkeys de
+chroot ${ROOTFS_PATH} service keyboard-setup restart
+
+# ===============================================
 # IMAGE-TYPE: DEVELOPMENT
 # ===============================================
 if [ "${IMAGE_TYPE}" != "development" ]; then
@@ -701,7 +729,7 @@ fi
 # ===============================================
 # IMAGE-TYPE: PRODUCTION - APP & ISPV
 # ===============================================
-if [ "${IMAGE_TYPE}" = "production" ]; then
+if [ "${IMAGE_TYPE}" = "production" ]  && [ "$INSTALL_APP_DATA" -eq 1 ]; then
     chroot "${ROOTFS_PATH}" ln -sf /data/ispv_root /ispv_root
     find ${APP_CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -a {} ${ROOTFS_PATH} \;
 fi
@@ -730,42 +758,13 @@ install -m 0644 ${ROOTFS_CONF_PATH}/etc/ntp.conf ${ROOTFS_PATH}/etc/
 # ===============================================
 # SUDOERS
 # ===============================================
-step_log "### Configure sudoers ###"
-chroot "${ROOTFS_PATH}" chmod +w /etc/sudoers
 
-cat <<EOM > ${ROOTFS_PATH}/etc/sudoers
-# Please consider adding local content in /etc/sudoers.d/ instead of
-
-Defaults        env_reset
-Defaults        mail_badpass
-Defaults        secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
-
-# User privilege specification
-root    ALL=(ALL:ALL) ALL
-
-# Members of the admin group may gain root privileges
-%admin ALL=(ALL) ALL
-
-# Allow members of group sudo to execute any command
-%sudo   ALL=(ALL:ALL) ALL
-
-# See sudoers(5) for more information on "#include" directives:
-#includedir /etc/sudoers.d
-
-## Polar Cutter Application Calls
-ALL     ALL =(ALL) NOPASSWD: /bin/mount
-ALL     ALL =(ALL) NOPASSWD: /bin/umount
-ALL     ALL =(ALL) NOPASSWD: /bin/date
-ALL     ALL =(ALL) NOPASSWD: /sbin/reboot
-ALL     ALL =(ALL) NOPASSWD: /sbin/halt
-ALL     ALL =(ALL) NOPASSWD: /sbin/hwclock
-ALL     ALL =(ALL) NOPASSWD: /usr/bin/nmcli
-## ---
-EOM
-
-chroot "${ROOTFS_PATH}" chmod -w /etc/sudoers
+step_log "### Configuring Sudoers ###"
+rm -r ${ROOTFS_PATH}/etc/sudoers.d/*
+cp ${ROOTFS_CONF_PATH}/etc/sudoers.d/${MACHINE}/* ${ROOTFS_PATH}/etc/sudoers.d/
 # show sudeors file on console:
-cat ${ROOTFS_PATH}/etc/sudoers
+ls -al ${ROOTFS_PATH}/etc/sudoers.d/
+
 
 
 # ===============================================
@@ -776,6 +775,7 @@ rm -rv "${ROOTFS_PATH}/usr/share/doc"
 rm -rv "${ROOTFS_PATH}/usr/share/doc-base"
 rm -rv "${ROOTFS_PATH}/usr/share/man"
 rm -rv "${ROOTFS_PATH}/usr/share/man-db"
+
 
 
 # ===============================================
@@ -790,7 +790,7 @@ cp -v "$REPO_ROOT/version" "${ROOTFS_PATH}/opt/version"
 # ===============================================
 if [ "${ENTER_CHROOT}" = "YES" ]; then
     step_log "### Enter chroot ###"
-    chroot "${ROOTFS_PATH}"
+    chroot "${ROOTFS_PATH}" /bin/bash
 fi
 
 # ===============================================
@@ -826,12 +826,6 @@ sync
 ## unmount virt fs
 umount_dev_sys_proc "${ROOTFS_PATH}"
 
-
-# ===============================================
-# CREATE ROOTFS CACHE
-# ===============================================
-mkdir -p $ROOTFS_FULL_CACHE_PATH
-cp -r ${ROOTFS_PATH}/* $ROOTFS_FULL_CACHE_PATH
 
 # ===============================================
 # TARBALL / INSTALLER

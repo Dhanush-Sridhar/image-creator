@@ -27,8 +27,8 @@ readonly BUFFER_ROOTFS_SIZE=200 # in MB
 readonly BOOT_MNT=/mnt/boot
 readonly ROOT_MNT="$TMP_DIR/mnt"
 
-readonly BINARY_INSTALLER=$TMP_DIR/production-image-installer-latest.bin
-readonly INSTALLER_BIN=production-image-installer-latest.bin
+readonly BINARY_INSTALLER=$INSTALLER_SYMLINK
+readonly BINARY_INSTALLER_NAME=$(basename $BINARY_INSTALLER)
 
 readonly PACKAGES="systemd-sysv gdisk dosfstools pciutils passwd usbutils e2fsprogs vim coreutils bzip2 parted locales fbset whiptail rsync"
 
@@ -101,9 +101,10 @@ function host_setup(){
 # =======================
 
 function create_rootfs(){
+    
 
     mkdir -p $ROOTFS_LIVE_DIR
-    step_log "Create Live RootFS of $DISTRO in $ROOTFS_LIVE_DIR "
+    step_log "Create Live RootFS of $LIVE_SYS_DISTRO in $ROOTFS_LIVE_DIR "
 
     if [ -e ${ROOTFS_LIVE_DIR}/etc/os-release ]; then 
         rm -r ${ROOTFS_LIVE_DIR}
@@ -111,24 +112,22 @@ function create_rootfs(){
 
 
     # check if cache exists
-    if [ -e "${ROOTFS_BASE_CACHE_PATH}/etc/os-release" ]; then
+    if [ -e "${LIVE_SYSTEM_CACHE_PATH}/etc/os-release" ]; then
         step_log "### Copy rootfs from base cache ###"
-        cp -r ${ROOTFS_BASE_CACHE_PATH}/* ${ROOTFS_LIVE_DIR}
-    else
-        debootstrap --variant=minbase --arch=$ARCH $DISTRO $ROOTFS_LIVE_DIR $REPO
-
-        #install kernal 
-        step_log "### Install Kernel ###"
-        if ! chroot "${ROOTFS_LIVE_DIR}" apt install -y linux-image-generic; then
-            echo "ERROR: Could not install kernel."
-            exit 1
-        fi
-
-        mkdir -p $ROOTFS_BASE_CACHE_PATH
-        cp -r ${ROOTFS_LIVE_DIR}/* ${ROOTFS_BASE_CACHE_PATH}/
+        cp -r ${LIVE_SYSTEM_CACHE_PATH}/* ${ROOTFS_LIVE_DIR}
+        return 0
     fi
-    mount_virtfs $ROOTFS_LIVE_DIR
+    
+    debootstrap --variant=minbase --arch=$ARCH $LIVE_SYS_DISTRO $ROOTFS_LIVE_DIR $REPO
 
+    mount_virtfs $ROOTFS_LIVE_DIR
+    
+    #install kernal 
+    step_log "### Install Kernel ###"
+    if ! chroot "${ROOTFS_LIVE_DIR}" apt install -y linux-image-generic; then
+        echo "ERROR: Could not install kernel."
+        exit 1
+    fi
     # Configure rootfs
     step_log "### updating and installing apt packages  ###"
     #chroot $ROOTFS_LIVE_DIR apt update
@@ -145,8 +144,6 @@ ExecStart=-/sbin/agetty -o '-p -f -- \\u' --noclear --autologin root %I $TERM
 EOT
 EOF
 
-## Start TUI Menu on Login
-echo ./$STARTUP_SCRIPT_NAME -i $INSTALLER_BIN >>  $ROOTFS_LIVE_DIR/root/.bashrc
 
 
 ## Auto-Login
@@ -155,12 +152,25 @@ cat <<EOT > /etc/vconsole.conf
 KEYMAP=de
 EOT
 EOF
+ 
+    echo "Root FS was build successfully in $ROOTFS_LIVE_DIR."
+    unmount_virtfs $ROOTFS_LIVE_DIR
 
+    echo "Create cache of the live system for future builds."
+    mkdir -p $LIVE_SYSTEM_CACHE_PATH
+    cp -r ${ROOTFS_LIVE_DIR}/* ${LIVE_SYSTEM_CACHE_PATH}/
+  
+}
+
+function copy_payload(){
+    step_log "Copy payload to liveos rootfs"
     # copy TUI scripts to opt
     if [ ! -e $STARTUP_SCRIPT_SOURCE_PATH ] ; then
         echo "TUI scripts $STARTUP_SCRIPT_SOURCE_PATH not found!"
         return 1
     fi
+    ## Start TUI Menu on Login
+    echo ./$STARTUP_SCRIPT_NAME -i $BINARY_INSTALLER_NAME -m "$MACHINE" >>  $ROOTFS_LIVE_DIR/root/.bashrc
 
     cp -v $STARTUP_SCRIPT_SOURCE_PATH $ROOTFS_LIVE_DIR/root/ || echo "Failed to copy TUI scripts to image"
 
@@ -170,10 +180,7 @@ EOF
     else
         cp -v $BINARY_INSTALLER $ROOTFS_LIVE_DIR/root/ || echo "Failed to copy binary installer to image"
     fi
-    
-    echo "Root FS was build successfully in $ROOTFS_LIVE_DIR."
 }
-
 
 # =======================
 # IMAGE
@@ -432,6 +439,7 @@ while [[ $# -gt 0 ]]; do
         --img)
             root_check
             create_img
+            copy_payload
             clean_img
             exit 0
 
@@ -470,10 +478,9 @@ while [[ $# -gt 0 ]]; do
 
         --all-img)
             root_check
-            unmount_virtfs $ROOTFS_LIVE_DIR
             clean_rootfs
             create_rootfs
-            unmount_virtfs $ROOTFS_LIVE_DIR
+            copy_payload
             create_img
             clean_img
             test_img

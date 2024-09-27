@@ -1,0 +1,8 @@
+## Polar Cutter Application Calls
+ALL     ALL =(ALL) NOPASSWD: /bin/mount
+ALL     ALL =(ALL) NOPASSWD: /bin/umount
+ALL     ALL =(ALL) NOPASSWD: /bin/date
+ALL     ALL =(ALL) NOPASSWD: /sbin/reboot
+ALL     ALL =(ALL) NOPASSWD: /sbin/halt
+ALL     ALL =(ALL) NOPASSWD: /sbin/hwclock
+ALL     ALL =(ALL) NOPASSWD: /sbin/bluetoothd

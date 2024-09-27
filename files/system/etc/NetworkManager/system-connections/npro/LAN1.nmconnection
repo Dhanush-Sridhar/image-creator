@@ -3,7 +3,7 @@ id=LAN1
 uuid=410c9ebd-515d-39a7-b144-f02144c4deee
 type=ethernet
 autoconnect-priority=-999
-interface-name=enp3s0
+interface-name=enp4s0
 permissions=
 
 [ethernet]

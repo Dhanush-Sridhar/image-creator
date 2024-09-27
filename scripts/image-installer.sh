@@ -90,8 +90,8 @@ function create_partitions() {
 
      #use parted insted of sgdisk
     parted -s ${_IMAGE_TARGET} mklabel msdos  
-    parted -s ${_IMAGE_TARGET} mkpart primary ext4 1MiB 10GiB
-    parted -s ${_IMAGE_TARGET} mkpart primary fat32 10GiB 100%
+    parted -s ${_IMAGE_TARGET} mkpart primary ext4 1MiB 20GiB
+    parted -s ${_IMAGE_TARGET} mkpart primary fat32 20GiB 100%
 
 
     mkfs.ext4 ${_ROOTFS_PARTITION}
