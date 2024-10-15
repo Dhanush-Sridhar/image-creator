@@ -586,13 +586,16 @@ echo -e "${IMAGE_PASSWORD}\n${IMAGE_PASSWORD}\n" | chroot ${ROOTFS_PATH} passwd 
 step_log "### Install packages in rootfs ###"
 chroot ${ROOTFS_PATH} ${APT_CMD} update
 chroot ${ROOTFS_PATH} ${APT_CMD} -y upgrade
-output=$(chroot ${ROOTFS_PATH} ${APT_CMD} -y install ${IMAGE_PACKAGE_LIST} 2>&1 | tee /dev/tty)
+
+echo ${IMAGE_PACKAGE_LIST}
+
+chroot ${ROOTFS_PATH} ${APT_CMD} -y install ${IMAGE_PACKAGE_LIST} 2>&1 
 if  [ $? -ne 0 ]; then
     
-    console_log "Error: $output Failed to install packages!"
     umount_dev_sys_proc "${ROOTFS_PATH}"
     exit 1
 fi
+
 if [ $INSTALL_NEXUS_PKG == 1 ]; then
     chroot ${ROOTFS_PATH} ${APT_CMD} -y install ${NEXUS_PACKAGES}
 fi
