@@ -5,8 +5,11 @@ set -eo pipefail
 REPO_ROOT=$(git rev-parse --show-toplevel) 
 
 echo "Load configuration ..."
-BUILD_CONFIG=$REPO_ROOT/scripts/build.conf
+BUILD_CONFIG=$REPO_ROOT/scripts/config/build.conf
 source $BUILD_CONFIG && echo "$BUILD_CONFIG was sourced!" || echo "Failed to source config: $BUILD_CONFIG"
+
+IMAGE_CONFIG=$REPO_ROOT/scripts/config/${MACHINE}-image.conf
+source $IMAGE_CONFIG && echo "$IMAGE_CONFIG was sourced!" || echo "Failed to source config: $IMAGE_CONFIG"
 
 HELPER_FUNCTIONS=$REPO_ROOT/scripts/helpers.sh
 source $HELPER_FUNCTIONS && echo "$HELPER_FUNCTIONS was sourced!" || echo "Failed to source config: $BUILD_CONFIG"
@@ -17,15 +20,15 @@ readonly ROOTFS_IMAGE_CREATOR_DIR="$TMP_DIR/rootfs"
 readonly ROOTFS_LIVE_DIR="$TMP_DIR/live-rootfs"
 readonly ISO_NAME="$TMP_DIR/polar-live-$(date +"%Y%m%d").iso"
 readonly ISO_NAME_LATEST="$TMP_DIR/polar-live-latest.iso"
-readonly IMAGE_FILE="$TMP_DIR/polar-live-$(date +"%Y%m%d").img"
+readonly IMAGE_FILE="$TMP_DIR/polar-live-${MACHINE}-$(date +"%Y%m%d").img"
 readonly IMAGE_FILE_LATEST_SYMLINK="$TMP_DIR/polar-live-latest.img"
-readonly BOOT_PARTITION_SIZE=20 # in MB
-readonly ROOT_PARTITION_KERNEL_SIZE=2600 # in MB (vmlinuz + initrd.img)
+
+readonly BUFFER_ROOTFS_SIZE=200 # in MB
 readonly BOOT_MNT=/mnt/boot
 readonly ROOT_MNT="$TMP_DIR/mnt"
 
-readonly BINARY_INSTALLER=$TMP_DIR/production-image-installer-latest.bin
-readonly INSTALLER_BIN=production-image-installer-latest.bin
+readonly BINARY_INSTALLER=$INSTALLER_SYMLINK
+readonly BINARY_INSTALLER_NAME=$(basename $BINARY_INSTALLER)
 
 readonly PACKAGES="systemd-sysv gdisk dosfstools pciutils passwd usbutils e2fsprogs vim coreutils bzip2 parted locales fbset whiptail rsync"
 
@@ -98,15 +101,37 @@ function host_setup(){
 # =======================
 
 function create_rootfs(){
+    
 
     mkdir -p $ROOTFS_LIVE_DIR
-    echo "Create RootFS of $LIVE_SYS_DISTRO in $ROOTFS_LIVE_DIR "
-    debootstrap --variant=minbase --arch=$ARCH $LIVE_SYS_DISTRO $ROOTFS_LIVE_DIR $REPO
-    mount_virtfs $ROOTFS_LIVE_DIR
+    step_log "Create Live RootFS of $LIVE_SYS_DISTRO in $ROOTFS_LIVE_DIR "
 
+    if [ -e ${ROOTFS_LIVE_DIR}/etc/os-release ]; then 
+        rm -r ${ROOTFS_LIVE_DIR}
+    fi
+
+
+    # check if cache exists
+    if [ -e "${LIVE_SYSTEM_CACHE_PATH}/etc/os-release" ]; then
+        step_log "### Copy rootfs from base cache ###"
+        cp -r ${LIVE_SYSTEM_CACHE_PATH}/* ${ROOTFS_LIVE_DIR}
+        return 0
+    fi
+    
+    debootstrap --variant=minbase --arch=$ARCH $LIVE_SYS_DISTRO $ROOTFS_LIVE_DIR $REPO
+
+    mount_virtfs $ROOTFS_LIVE_DIR
+    
+    #install kernal 
+    step_log "### Install Kernel ###"
+    if ! chroot "${ROOTFS_LIVE_DIR}" apt install -y linux-image-generic; then
+        echo "ERROR: Could not install kernel."
+        exit 1
+    fi
     # Configure rootfs
-    chroot $ROOTFS_LIVE_DIR apt update
-    chroot $ROOTFS_LIVE_DIR apt install -y --no-install-recommends $PACKAGES
+    step_log "### updating and installing apt packages  ###"
+    #chroot $ROOTFS_LIVE_DIR apt update
+    chroot ${ROOTFS_LIVE_DIR} apt install -y $PACKAGES
 
 
 ## Auto-Login
@@ -119,8 +144,6 @@ ExecStart=-/sbin/agetty -o '-p -f -- \\u' --noclear --autologin root %I $TERM
 EOT
 EOF
 
-## Start TUI Menu on Login
-echo ./$STARTUP_SCRIPT_NAME -i $INSTALLER_BIN >>  $ROOTFS_LIVE_DIR/root/.bashrc
 
 
 ## Auto-Login
@@ -129,12 +152,25 @@ cat <<EOT > /etc/vconsole.conf
 KEYMAP=de
 EOT
 EOF
+ 
+    echo "Root FS was build successfully in $ROOTFS_LIVE_DIR."
+    unmount_virtfs $ROOTFS_LIVE_DIR
 
+    echo "Create cache of the live system for future builds."
+    mkdir -p $LIVE_SYSTEM_CACHE_PATH
+    cp -r ${ROOTFS_LIVE_DIR}/* ${LIVE_SYSTEM_CACHE_PATH}/
+  
+}
+
+function copy_payload(){
+    step_log "Copy payload to liveos rootfs"
     # copy TUI scripts to opt
     if [ ! -e $STARTUP_SCRIPT_SOURCE_PATH ] ; then
         echo "TUI scripts $STARTUP_SCRIPT_SOURCE_PATH not found!"
         return 1
     fi
+    ## Start TUI Menu on Login
+    echo ./$STARTUP_SCRIPT_NAME -i $BINARY_INSTALLER_NAME -m "$MACHINE" >>  $ROOTFS_LIVE_DIR/root/.bashrc
 
     cp -v $STARTUP_SCRIPT_SOURCE_PATH $ROOTFS_LIVE_DIR/root/ || echo "Failed to copy TUI scripts to image"
 
@@ -144,10 +180,7 @@ EOF
     else
         cp -v $BINARY_INSTALLER $ROOTFS_LIVE_DIR/root/ || echo "Failed to copy binary installer to image"
     fi
-    
-    echo "Root FS was build successfully in $ROOTFS_LIVE_DIR."
 }
-
 
 # =======================
 # IMAGE
@@ -172,7 +205,7 @@ function create_img(){
     readonly KBYTE=1024
     
     # calculate the size of the image file
-    DD_Count=$(echo "$ROOT_PARTITION_SIZE+($ROOT_PARTITION_KERNEL_SIZE*$KBYTE)" | bc)
+    DD_Count=$(echo "$ROOT_PARTITION_SIZE+($BUFFER_ROOTFS_SIZE*$KBYTE)" | bc)
 
     # convert the size to human readable format just for display
     Image_Size=$((echo "$DD_Count*$KBYTE" | bc) | numfmt --to=si)
@@ -199,9 +232,15 @@ function create_img(){
     # create persitant loop device for further use
     mkdir -p $LOOP_DEV_NAME
     ln -s $LOOP_DEV $LOOP_DEV_NAME
+    
+    if [ $? -ne 0  ]; then       
+        echo "ERROR: Could not create loop device."
+        clean_img
+        exit 1
+    fi
 
 
-    # Create the file system
+   # Create the file system
     mkfs.ext4 ${LOOP_DEV}p1 && echo "Rootfs partition created" || echo "Could not create rootfs partition."
 
 
@@ -233,15 +272,7 @@ function create_img(){
  #mount dev, proc and sys
     mount_virtfs $ROOT_MNT
 
-    #Install Kernal 
-    if ! chroot $ROOT_MNT apt install -y linux-image-generic; then
-        echo "ERROR: Could not install kernel."
-       clean_img
-       exit 1
-    fi
-
-   
-   
+      
 
      # install grub BIOS bootloader
     grub-install --target=i386-pc --boot-directory=$ROOT_MNT/boot --recheck $LOOP_DEV
@@ -408,6 +439,7 @@ while [[ $# -gt 0 ]]; do
         --img)
             root_check
             create_img
+            copy_payload
             clean_img
             exit 0
 
@@ -446,10 +478,9 @@ while [[ $# -gt 0 ]]; do
 
         --all-img)
             root_check
-            unmount_virtfs $ROOTFS_LIVE_DIR
             clean_rootfs
             create_rootfs
-            unmount_virtfs $ROOTFS_LIVE_DIR
+            copy_payload
             create_img
             clean_img
             test_img

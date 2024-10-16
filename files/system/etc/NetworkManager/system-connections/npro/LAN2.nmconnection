@@ -1,18 +1,18 @@
 [connection]
-id=LAN1
-uuid=410c9ebd-515d-39a7-b144-f02144c4deee
+id=LAN2
+uuid=626cdfb0-1823-3158-927e-db166af0e64f
 type=ethernet
 autoconnect-priority=-999
 interface-name=enp2s0
 permissions=
+timestamp=1606153054
 
 [ethernet]
 mac-address-blacklist=
 
 [ipv4]
-address1=192.168.169.122/24
 dns-search=
-method=manual
+method=auto
 
 [ipv6]
 addr-gen-mode=stable-privacy

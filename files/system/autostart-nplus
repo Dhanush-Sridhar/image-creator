@@ -1,0 +1,16 @@
+# display settings
+xrandr --output DP-2 --off
+xrandr --output HDMI-1 --auto --primary
+
+# keyboard settings
+setxkbmap -option "grp:lctrl_lshift_toggle" -layout "de" &
+loadkeys de
+
+# disable screen blanking / engery saver mode
+xset s off
+xset s noblank
+xset -dpms
+
+
+cd /opt/polar/tms34010-sim
+./tms34010-app

@@ -14,25 +14,30 @@ TUILOG="${SCRIPTDIR}/tui.log"
 ERRORLOG="${SCRIPTDIR}/error.log"
 
 # TUI VARS
+MACHINE_TYPE=""
 BACKTITLE="Polar Image Flasher 1.0"
 WIDTH=70
+
 
 # Options INSTALLER Bin name
 
 INSTALLER_BIN=""
 
 # Parse options
-while getopts "i:" opt; do
+while getopts "i:m:" opt; do
   case $opt in
     i)
       INSTALLER_BIN="$OPTARG"
       ;;
+    m)
+      MACHINE_TYPE="$OPTARG"
+      ;;
     \?)
-      echo "Invalid option: -$OPTARG" >&2
+      echo "Invalid option: -$opt" >&2
       exit 1
       ;;
     :)
-      echo "Option -$OPTARG requires an argument." >&2
+      echo "Option -$opt requires an argument." >&2
       exit 1
       ;;
   esac
@@ -60,8 +65,33 @@ export STANDARD='
     disabledentry=blue,
 '
 
+
 export REDBLUE='
     root=,red
+    checkbox=,blue
+    entry=,blue
+    label=blue,
+    actlistbox=,blue
+    helpline=,blue
+    roottext=,blue
+    emptyscale=blue
+    disabledentry=blue,
+'
+
+export GREENBLUE='
+    root=,green
+    checkbox=,blue
+    entry=,blue
+    label=blue,
+    actlistbox=,blue
+    helpline=,blue
+    roottext=,blue
+    emptyscale=blue
+    disabledentry=blue,
+'
+
+export CYANBLUE='
+    root=,cyan
     checkbox=,blue
     entry=,blue
     label=blue,
@@ -118,14 +148,30 @@ export REDBLUE='
 #color15 or white
 
 # chosen color profile
-export NEWT_COLORS=$REDBLUE
+
+case $MACHINE_TYPE in
+    nplus)
+        export NEWT_COLORS=$GREENBLUE     
+        ;;
+    npro)
+        export NEWT_COLORS=$REDBLUE 
+        ;;
+    pure)
+        export NEWT_COLORS=$STANDARD      
+        ;;
+    *)
+        export NEWT_COLORS=$CYANBLUE
+        ;;
+esac
+
+
 
 
 # ===========================
 # MAIN MENU
 # ===========================
-MAIN_MENU_TITLE=" Flash Menu"
-INFOTEXT=" Welcome to Polar Image Flasher! \n
+MAIN_MENU_TITLE=" $MACHINE_TYPE Image Flash Menu"
+INFOTEXT=" Welcome to Polar Image Flasher for the $MACHINE_TYPE machine Generation! \n
 Please select the desired option from the menu below. \n\n\n"
              
 
