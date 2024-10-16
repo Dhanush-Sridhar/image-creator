@@ -179,7 +179,18 @@ step_log "## Install bootloader ##"
 chmod -x "${ROOTFS_PATH}/etc/grub.d/30_os-prober"
 grub-install --target=i386-pc --boot-directory=$ROOTFS_PATH/boot --recheck $IMAGE_TARGET
 chroot "${ROOTFS_PATH}" update-grub
+# update the grub configuration
+cat <<EOF > ${ROOTFS_PATH}/boot/grub/grub.cfg
+    set default=0
+    set timeout=0
 
+    menuentry "PolarOS" {
+        linux /boot/vmlinuz root=UUID=${UUID_ROOTFS} rw quiet splash
+        initrd /boot/initrd.img
+
+
+    }
+EOF
 umount_dev_sys_proc "${ROOTFS_PATH}"
 
 umount "${DATAFS_PATH}"

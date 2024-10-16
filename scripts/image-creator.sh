@@ -72,7 +72,7 @@ function usage() {
     echo ""
     echo "  --install-qt :"
     echo "      Installs the Stephan Binner qt version 5.15.0 ubuntu package."
-    echo "      Default: ${INSTALL_QT}"
+    echo "      Default: ${INSTALL_QT5}"
     echo ""
     echo "  --install-wifi :"
     echo "      Installs Wi-Fi driver for Edimax N150 (EW7811UnV2/EW-7611ULB)"
@@ -256,7 +256,7 @@ do
             shift
             ;;
         --install-qt)
-            INSTALL_QT="YES"
+            INSTALL_QT5="YES"
             shift
             ;;
         --install-wifi)
@@ -531,7 +531,7 @@ if [ "${DISTRO_ID}" = "ubuntu" ]; then
         #echo "deb-src ${REPO_URL} ${REPO} ${REPO_COMPONENTS}" >> "${ROOTFS_PATH}/etc/apt/sources.list"
     done
 
-    if [ $INSTALL_NEXUS_PKG == 1 ]; then
+    if [ ${INSTALL_NEXUS_PKG} = "YES" ]; then
          ## add nexus key to keyring
          wget -O ${ROOTFS_PATH}/${KEYRING_PATH} ${NEXUS_REPO_KEYRING}
          ## add nexus repository to source list 
@@ -596,7 +596,7 @@ if  [ $? -ne 0 ]; then
     exit 1
 fi
 
-if [ $INSTALL_NEXUS_PKG == 1 ]; then
+if [ ${INSTALL_NEXUS_PKG} = "YES" ]; then
     chroot ${ROOTFS_PATH} ${APT_CMD} -y install ${NEXUS_PACKAGES}
 fi
 chroot ${ROOTFS_PATH} ${APT_CMD} -y clean
@@ -613,14 +613,19 @@ if [ "${IMAGE_TYPE}" != "installation" ]; then
     fi
 
     #################### Qt 5.15.0 by Stephan Binner ###########################
-    if [ ${INSTALL_QT} = "YES" ]; then
-        ## Tarball packages
-        for TAR_FILE in $(ls -1 ${PKG_TARBALLS_PATH}/*.tar*)
-        do  
-            console_log "## Install $(basename ${TAR_FILE}) to rootfs ##"
-            console_log ""
-            tar -xf ${TAR_FILE} -C ${ROOTFS_PATH}
-        done
+    if [ ${INSTALL_QT5} = "YES" ]; then
+        step_log "### Install Qt 5.15.0 by Stephan Binner ###"
+        wget -O ${ROOTFS_PATH}/tmp/qt_5-15-15_amd64.deb http://nexus-repository.polar-mohr-cloud.com:8081/repository/polar-general/pool/q/qt/qt_5-15-15_amd64.deb
+        chroot "${ROOTFS_PATH}" dpkg -i /tmp/qt_5-15-15_amd64.deb
+        chroot "${ROOTFS_PATH}" rm /tmp/qt_5-15-15_amd64.deb
+  
+    fi
+    #################### Install Site Manager ###########################
+    if [ ${INSTALL_SITE_MANAGER} = "YES" ]; then
+        step_log "### Install Site Manager ###"
+        wget -O ${ROOTFS_PATH}/tmp/site_manager.deb http://nexus-repository.polar-mohr-cloud.com:8081/repository/polar-general/pool/s/sitemanager/sitemanager_1.0.0_amd64.deb
+        chroot "${ROOTFS_PATH}" dpkg -i /tmp/site_manager.deb
+        chroot "${ROOTFS_PATH}" rm /tmp/site_manager.deb
     fi
 
     #################### Debian packages ########################################
@@ -732,7 +737,7 @@ fi
 # ===============================================
 # IMAGE-TYPE: PRODUCTION - APP & ISPV
 # ===============================================
-if [ "${IMAGE_TYPE}" = "production" ]  && [ "$INSTALL_APP_DATA" -eq 1 ]; then
+if [ "${IMAGE_TYPE}" = "production" ]  && [ "${INSTALL_APP_DATA}" = "YES" ]; then
     chroot "${ROOTFS_PATH}" ln -sf /data/ispv_root /ispv_root
     find ${APP_CONF_PATH} -mindepth 1 -maxdepth 1 -type d -exec cp -a {} ${ROOTFS_PATH} \;
 fi
