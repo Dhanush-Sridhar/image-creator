@@ -1,43 +1,73 @@
-# README
+# Polar OS Image Creator
 
-This repo contains config files and shell scripts to create a binary installer with debootstrap. 
-It's also possible to create images for non-desktop target platforms. 
+## Overview
 
-## Quickstart
+The Polar OS Image Creator is a tool designed to create custom Debian-based images using debootstrap. These images are packaged into a live system that serves as an installation medium for Box-PC applications. The project supports multiple machine types and configurations, allowing for flexible and efficient image creation and deployment.
 
-1. Add your packages into files/packages/{binaries,deb,tarballs} i.e. HMI application, Qt-Libs
-2. Edit the build.conf and image.conf (optional)
-3. Build your target (production installer in most cases) - s. README.cmd.md
+## Features
 
+- **Custom Image Creation**: Build Debian-based images tailored to specific machine types using debootstrap.
+- **Live System Packaging**: Package images into a live system for easy installation on Box-PCs.
+- **Support for Multiple Architectures**: Create images for various architectures, including i386, amd64, armel, and armhf.
+- **Automated Installation**: Use the live system as an installation medium with automated scripts for seamless deployment.
 
-## Build
+## Prerequisites
 
-s. README.cmd.md
+- A Linux-based system with `bash` and essential build tools installed.
+- Access to a Debian or Ubuntu repository for debootstrap.
+- Git for cloning the repository and managing versions.
 
-Examples:
-Binary Installer:   `./image-creator.sh --arch amd64 --distro focal --image-target installer --image-type production`
-Live System on USB: `./image-creator.sh --arch amd64 --distro focal --image-target /dev/sdb --image-type installation`
+## Installation
 
+1. **Clone the Repository**:
+   ```bash
+   git clone git@bitbucket.org:polar-cutting/image-creator.git
+   cd image-creator
+   ```
 
-## How it works
+2. **Install Dependencies**:
+   Run the following command to install necessary packages:
+   ```bash
+   sudo apt update
+   sudo apt install debootstrap grub-pc-bin grub-efi-amd64-bin mtools xorriso
+   ```
 
-Shell scripts to build a Linux image with debootstrap and configure it via chroot commands. 
+3. **Configure the Environment**:
+   Edit the configuration files located in `scripts/config/` to set up your build environment. Key files include:
+   - `build.conf`: General build settings.
+   - `nplus-image.conf`, `npro-image.conf`, `pure-image.conf`: Machine-specific configurations.
 
-## Structure
+## Usage
 
-This repos contains all config files inside `confs`:
-- `app` - ISPV_root and initial .config (from QSettings) 
-- `system` - Linux system dirs like `etc` and `var`
+### Building an Image
 
-## Configure
+To create a custom image and package it into a live system, use the `Makefile` to streamline the process. The `Makefile` provides several targets to automate tasks such as pulling packages, building the installer, and creating a live system. To build an image and package it into a live system, use the following command:
 
-First feed the `packages` dir with packages to install.
+```bash
+sudo make all
+```
 
-Formats: tarball, debian (.deb), binaries
+This command will execute all necessary scripts to build the installer and live system, as defined in the `Makefile`. It will:
 
-Paths:
-- packages/deb
-- packages/tarballs
-- packages/binaries
+- Pull Debian packages from the Nexus or S3 repository.
+- Build the Polar OS root filesystem and the binary installer.
+- Create the live system as an image file.
 
+### Output Artifacts
 
+The output artifacts, including the final image files, are located in the `tmp` folder within the repository. The final image file, typically with a `.img` extension, can be flashed to a USB drive using tools like Rufus or Raspberry Pi Imager.
+
+### Flashing the Image
+
+To flash the image onto a USB drive, use a tool like Rufus or Raspberry Pi Imager. This will allow you to use the USB drive as a bootable installation medium for the Box-PC.
+
+## Contributing
+
+Contributions are welcome! Please fork the repository and submit a pull request with your changes. Ensure that your code adheres to the project's coding standards and includes appropriate documentation.
+
+## Contact
+
+For questions or support, please contact the project maintainers:
+
+- Dhanush Sridhar
+- Suria Reddy
