@@ -29,13 +29,13 @@ The Polar OS Image Creator is a tool designed to create custom Debian-based imag
    Run the following command to install necessary packages:
    ```bash
    sudo apt update
-   sudo apt install debootstrap grub-pc-bin grub-efi-amd64-bin mtools xorriso
+   sudo apt install debootstrap grub-pc-bin make 
    ```
 
 3. **Configure the Environment**:
    Edit the configuration files located in `scripts/config/` to set up your build environment. Key files include:
-   - `build.conf`: General build settings.
-   - `nplus-image.conf`, `npro-image.conf`, `pure-image.conf`: Machine-specific configurations.
+   - `build.conf`: General build settings. Refere to `docs/build.Conf_variables.md` for details 
+   - `nplus-image.conf`, `npro-image.conf`, `pure-image.conf`: Machine-specific configurations. Refere to `docs/image.conf_variables.md` for details
 
 ## Usage
 
